@@ -14,7 +14,14 @@ function arg(name: string, fallback: string): string {
 const perBand = Number(arg('per-band', '4'));
 const timeClass = arg('time-class', 'blitz');
 const outPath = arg('out', 'data/players.json');
-const BANDS: [number, number][] = arg('bands', '1200-1600,1600-2000,2000-2400,2400-3000')
+// note: lichess ratings effectively bottom out around 600-800 (Glicko floor +
+// provisional pull toward 1500), so 400-800 pools run thin and 0-400 would be
+// empty — sub-800 coverage for chess.com beginners needs chess.com-sourced
+// calibration (per-platform baselines, future work)
+const BANDS: [number, number][] = arg(
+  'bands',
+  '400-800,800-1200,1200-1600,1600-2000,2000-2400,2400-3000',
+)
   .split(',')
   .map((range) => {
     const [min, max] = range.split('-').map(Number);
