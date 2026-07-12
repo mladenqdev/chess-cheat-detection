@@ -2,7 +2,9 @@ import {
   aggregatePlayerMetrics,
   assessPositions,
   CloudEvalClient,
+  compareToCohort,
   computePlayerGameMetrics,
+  defaultBaselines,
   evaluateGamePositions,
   fetchChesscomGames,
   fetchChesscomProfile,
@@ -10,12 +12,14 @@ import {
   fetchLichessProfile,
   reportTier,
   UserNotFoundError,
+  type CohortComparison,
   type NormalizedGame,
   type NormalizedProfile,
   type Platform,
   type PlayerAggregate,
   type PlayerGameMetrics,
   type ReportTier,
+  type TimeClass,
 } from '@ccm/core';
 import { useCallback, useRef, useState } from 'react';
 import { getSharedPool } from '../engine/stockfishPool';
@@ -44,8 +48,41 @@ export interface ReportData {
   profile: NormalizedProfile;
   tier: ReportTier;
   aggregate: PlayerAggregate;
+  comparison?: CohortComparison;
   games: AnalyzedGame[];
   finishedAt: number;
+}
+
+/**
+ * Picks the cohort to compare against: the time class carrying the most
+ * eligible moves, with the player's current rating there (falling back to the
+ * mean in-game rating). v1 compares the full aggregate against that band even
+ * when time classes are mixed — noted as a refinement candidate.
+ */
+function cohortComparisonFor(
+  profile: NormalizedProfile,
+  perPlayer: PlayerGameMetrics[],
+  aggregate: PlayerAggregate,
+): CohortComparison | undefined {
+  if (perPlayer.length === 0) return undefined;
+  const eligibleByClass = new Map<TimeClass, number>();
+  for (const metrics of perPlayer) {
+    eligibleByClass.set(
+      metrics.timeClass,
+      (eligibleByClass.get(metrics.timeClass) ?? 0) + metrics.eligible,
+    );
+  }
+  const dominant = [...eligibleByClass.entries()].sort((a, b) => b[1] - a[1])[0]![0];
+  const inGameRatings = perPlayer
+    .filter((metrics) => metrics.timeClass === dominant && metrics.rating !== undefined)
+    .map((metrics) => metrics.rating!);
+  const rating =
+    profile.ratings[dominant] ??
+    (inGameRatings.length > 0
+      ? inGameRatings.reduce((a, b) => a + b, 0) / inGameRatings.length
+      : undefined);
+  if (rating === undefined) return undefined;
+  return compareToCohort(aggregate, { timeClass: dominant, rating }, defaultBaselines);
 }
 
 export type ReportState =
@@ -119,13 +156,15 @@ export function useReport() {
       }
 
       const aggregate = aggregatePlayerMetrics(perPlayer);
+      const comparison = cohortComparisonFor(profile, perPlayer, aggregate);
       setState({
         phase: 'done',
         data: {
           platform,
           profile,
-          tier: reportTier(profile, aggregate),
+          tier: reportTier(profile, aggregate, comparison),
           aggregate,
+          comparison,
           games: analyzed,
           finishedAt: Date.now(),
         },

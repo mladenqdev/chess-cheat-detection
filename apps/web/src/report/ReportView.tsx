@@ -27,13 +27,49 @@ function TierBanner({ data }: { data: ReportData }) {
       </section>
     );
   }
+
+  const comparison = data.comparison;
+  if (comparison && (tier === 'normal' || tier === 'unusual' || tier === 'extreme')) {
+    const { band, composite, provisional } = comparison;
+    const cohortLabel = `measured ${band.timeClass} players rated ${band.minRating}–${band.maxRating}`;
+    const content = {
+      normal: {
+        className: 'tier-neutral',
+        title: 'Consistent with the rating cohort',
+        body: `Engine agreement, mistake profile and timing sit where ${cohortLabel} normally sit (composite anomaly score ${composite.toFixed(1)}).`,
+      },
+      unusual: {
+        className: 'tier-insufficient',
+        title: 'Unusual for the rating cohort',
+        body: `Some metrics sit above the typical range of ${cohortLabel} (composite anomaly score ${composite.toFixed(1)}). Unusual is not proof — strong form, preparation or style can do this. More games sharpen the picture.`,
+      },
+      extreme: {
+        className: 'tier-flagged',
+        title: 'Extremely unusual for the rating cohort',
+        body: `Multiple metrics sit far outside the range of ${cohortLabel} (composite anomaly score ${composite.toFixed(1)}). This level of anomaly is rare among honest players — still statistical evidence, not a verdict.`,
+      },
+    }[tier];
+    return (
+      <section className={`tier ${content.className}`} role="status">
+        <h2>{content.title}</h2>
+        <p>{content.body}</p>
+        {provisional && (
+          <p className="small muted">
+            Provisional baseline — built from a pilot sample of {band.nPlayers} players; treat as
+            indicative only until full calibration.
+          </p>
+        )}
+      </section>
+    );
+  }
+
   return (
     <section className="tier tier-neutral" role="status">
       <h2>Metrics computed — no verdict</h2>
       <p>
-        {aggregate.eligible} decisions analyzed across {aggregate.games} games. Cohort comparison
-        (is this normal for the rating?) arrives with calibration; until then, read the raw values
-        below with their confidence intervals.
+        {aggregate.eligible} decisions analyzed across {aggregate.games} games. No calibrated
+        baseline covers this player's rating and time control yet — read the raw values below with
+        their confidence intervals.
       </p>
     </section>
   );
@@ -50,7 +86,17 @@ function CiBar({ rate }: { rate: RateWithCi }) {
   );
 }
 
-function RateCard({ label, rate, hint }: { label: string; rate: RateWithCi; hint: string }) {
+function RateCard({
+  label,
+  rate,
+  hint,
+  cohort,
+}: {
+  label: string;
+  rate: RateWithCi;
+  hint: string;
+  cohort?: string;
+}) {
   return (
     <div className="card metric">
       <h3>{label}</h3>
@@ -63,16 +109,28 @@ function RateCard({ label, rate, hint }: { label: string; rate: RateWithCi; hint
       </p>
       <CiBar rate={rate} />
       <p className="muted small">{hint}</p>
+      {cohort && <p className="muted small cohort-line">cohort: {cohort}</p>}
     </div>
   );
 }
 
-function ValueCard({ label, value, hint }: { label: string; value: string; hint: string }) {
+function ValueCard({
+  label,
+  value,
+  hint,
+  cohort,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  cohort?: string;
+}) {
   return (
     <div className="card metric">
       <h3>{label}</h3>
       <p className="value">{value}</p>
       <p className="muted small">{hint}</p>
+      {cohort && <p className="muted small cohort-line">cohort: {cohort}</p>}
     </div>
   );
 }
@@ -162,6 +220,7 @@ function GamesTable({ games }: { games: AnalyzedGame[] }) {
 
 export function ReportView({ data }: { data: ReportData }) {
   const { profile, aggregate } = data;
+  const band = data.comparison?.band;
   return (
     <article className="report">
       <header className="report-header">
@@ -182,22 +241,32 @@ export function ReportView({ data }: { data: ReportData }) {
           label="Top engine move"
           rate={aggregate.t1}
           hint="How often the played move was Stockfish's #1 choice, in positions with a real decision to make."
+          cohort={
+            band && `${(band.t1Rate.mean * 100).toFixed(1)}±${(band.t1Rate.std * 100).toFixed(1)}%`
+          }
         />
         <RateCard
           label="Top-2 moves"
           rate={aggregate.t2}
           hint="Played one of the engine's two best moves."
+          cohort={
+            band && `${(band.t2Rate.mean * 100).toFixed(1)}±${(band.t2Rate.std * 100).toFixed(1)}%`
+          }
         />
         <RateCard
           label="Top-3 moves"
           rate={aggregate.t3}
           hint="Played one of the engine's three best moves."
+          cohort={
+            band && `${(band.t3Rate.mean * 100).toFixed(1)}±${(band.t3Rate.std * 100).toFixed(1)}%`
+          }
         />
         {aggregate.acpl && (
           <ValueCard
             label="Centipawn loss"
             value={`${aggregate.acpl.mean.toFixed(0)} ± ${aggregate.acpl.std.toFixed(0)}`}
             hint={`Average quality drop per decision (n=${aggregate.acpl.n}). Lower = stronger play.`}
+            cohort={band && `${band.acpl.mean.toFixed(0)}±${band.acpl.std.toFixed(0)}`}
           />
         )}
         {aggregate.accuracyMean && (
@@ -205,6 +274,7 @@ export function ReportView({ data }: { data: ReportData }) {
             label="Accuracy"
             value={aggregate.accuracyMean.mean.toFixed(1)}
             hint="Game accuracy (lichess formula), averaged over analyzed games."
+            cohort={band && `${band.accuracy.mean.toFixed(1)}±${band.accuracy.std.toFixed(1)}`}
           />
         )}
         {aggregate.timing && (
