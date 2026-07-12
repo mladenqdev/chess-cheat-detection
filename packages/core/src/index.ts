@@ -4,3 +4,8 @@ export * from './http';
 export * from './replay';
 export * from './platforms/lichess';
 export * from './platforms/chesscom';
+export * from './engine/types';
+export * from './engine/uci';
+export * from './engine/cloudEval';
+export * from './engine/eligibility';
+export * from './engine/analyser';
