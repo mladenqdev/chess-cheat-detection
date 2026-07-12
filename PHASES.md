@@ -173,7 +173,7 @@ engine → report UI → calibration → deploy.
   for mate scores. Positions after the last move are never engine-evaluated.
 - **T2/T3 are cumulative** (T2 includes T1), matching PGN-Spy's reporting.
 - **Think time = prevOwnClock − clock + increment**, clamped at 0 (lag compensation can
-  go negative). Timing metrics use only the player's *eligible* moves — premoves and
+  go negative). Timing metrics use only the player's _eligible_ moves — premoves and
   book moves would poison flat-timing detection.
 - **The sample gate withholds stat summaries entirely** (acpl/accuracy/timing are
   `undefined` below 120 eligible moves) rather than showing them with a caveat — a tiny
@@ -193,3 +193,49 @@ engine → report UI → calibration → deploy.
   scoring lands with the report UI (phase 5) + baselines (phase 6).
 - chess.com games never carry platform accuracy for cross-checking our numbers in the
   harness — the lichess golden test covers formula fidelity instead.
+
+## phase 5 — report ui (done 2026-07-12)
+
+### what was done
+
+- Replaced the dev harness with the real product UI: hash routing (`#/`, `#/methodology`,
+  `#/u/<platform>/<user>` deep links that auto-run), `report/useReport.ts` orchestration
+  hook (fetch → per-game engine analysis with progress → metrics → aggregate → tier),
+  `ReportPage` (hero, search form, progress view), `ReportView` (tier banner, metric cards
+  with inline-SVG Wilson-CI bars, per-game table, disclaimer), `MethodologyPage`
+  (full plain-language writeup), placeholder design tokens in `styles.css`.
+- `packages/core`: `reportTier()` — honest headline states until calibration:
+  `flagged-by-platform` / `insufficient-sample` / `uncalibrated` (+ tests, 68 total).
+- Verified headless: 10 games in 47s; sample gate fired at 116/120 and correctly withheld
+  acpl/accuracy/timing summaries; our per-game accuracy landed within ~1–4 points of
+  lichess's reported values on the two platform-analysed games (cross-validation on top
+  of the golden test); methodology route renders; deep-link URL written on submit.
+
+### decisions
+
+- **Design system pending, so tokens are placeholders**: CSS custom properties, dark-first
+  with `prefers-color-scheme` light override, gold/tan accent per the chosen "chessboard"
+  palette. The design agent's "Ledger" direction will replace token values and refine
+  components — the structure (cards, tier banner, CI bars, tables) already matches it.
+- **No verdict states are shipped that the math can't back**: `reportTier` only knows
+  platform flags, the sample gate, and "uncalibrated". The cohort tier slider
+  (normal/unusual/extreme) arrives with phase 6 baselines.
+- **Deep links re-run the analysis** rather than loading a stored report — there is no
+  backend; the URL encodes (platform, username) and caches make re-runs cheap.
+- **Progress copy doubles as a privacy statement** ("nothing is uploaded — the engine
+  runs locally"), which is both true and a differentiator worth surfacing mid-wait.
+- react-hooks v7 lint shaped the deep-link implementation: no setState in effects, no
+  ref reads during render → lazy `useState` initializers parsing the hash.
+
+### notes for future
+
+- Cloud-eval hit a 429 once in a 10-game run — the self-disable fallback worked, but
+  consider lowering `cloudPlyLimit` or widening the disable window when calibration
+  hammers the API (phase 6 should probably run cloud-eval-free).
+- Design integration TODO: port the Ledger design system (fonts, exact tokens, tier
+  slider, cohort tick marks, "engine agreement by depth" bars), fix its "Stockfish 16"
+  copy to 18, add favicon + og-image for the screenshot crop.
+- The progress view still lacks the live mini chessboard the design mocks — FENs are
+  available; add when porting the design.
+- Per-game "suspicion sort" (plan's phase-5 item) deferred to calibration: sorting by
+  raw T1% without baselines would imply meaning the numbers don't have yet.
