@@ -1,15 +1,20 @@
 import {
+  aggregatePlayerMetrics,
   assessPositions,
   CloudEvalClient,
+  computePlayerGameMetrics,
   evaluateGamePositions,
   fetchChesscomGames,
   fetchChesscomProfile,
   fetchLichessGames,
   fetchLichessProfile,
+  mean,
   UserNotFoundError,
   type NormalizedGame,
   type NormalizedProfile,
   type Platform,
+  type PlayerAggregate,
+  type PlayerGameMetrics,
 } from '@ccm/core';
 import { useState, type FormEvent } from 'react';
 import { getSharedPool } from './engine/stockfishPool';
@@ -26,12 +31,15 @@ interface AnalysisRow {
   exclusions: string;
   sources: string;
   avgDepth: string;
+  /** the searched player's metrics in this game */
+  player?: PlayerGameMetrics;
 }
 
 interface AnalysisState {
   running: boolean;
   label: string;
   rows: AnalysisRow[];
+  aggregate?: PlayerAggregate;
 }
 
 /**
@@ -85,9 +93,10 @@ export default function App() {
   }
 
   async function onAnalyze() {
-    if (!games || analysis?.running) return;
+    if (!games || !profile || analysis?.running) return;
     const targets = games.slice(0, ANALYZE_GAMES);
     const rows: AnalysisRow[] = [];
+    const playerMetrics: PlayerGameMetrics[] = [];
     setAnalysis({ running: true, label: 'starting engine…', rows });
     try {
       for (let i = 0; i < targets.length; i++) {
@@ -117,6 +126,8 @@ export default function App() {
           sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1);
         }
         const depths = evals.flatMap((e) => (e ? [e.depth] : []));
+        const player = computePlayerGameMetrics(game, evals, assessments, profile.username);
+        if (player) playerMetrics.push(player);
         rows.push({
           id: game.id,
           url: game.url,
@@ -127,9 +138,15 @@ export default function App() {
           avgDepth: depths.length
             ? (depths.reduce((a, b) => a + b, 0) / depths.length).toFixed(1)
             : '—',
+          player,
         });
       }
-      setAnalysis({ running: false, label: 'done', rows });
+      setAnalysis({
+        running: false,
+        label: 'done',
+        rows,
+        aggregate: aggregatePlayerMetrics(playerMetrics),
+      });
     } catch (err) {
       setAnalysis({ running: false, label: `failed: ${String(err)}`, rows });
     }
@@ -193,6 +210,33 @@ export default function App() {
             </button>{' '}
             {analysis && <em>{analysis.label}</em>}
           </p>
+          {analysis?.aggregate && (
+            <section>
+              <h4>
+                aggregate for {profile?.username} — {analysis.aggregate.eligible} eligible moves in{' '}
+                {analysis.aggregate.games} games
+                {!analysis.aggregate.sampleOk && (
+                  <span style={{ color: 'darkorange' }}>
+                    {' '}
+                    (below the 120-move minimum — numbers not conclusive)
+                  </span>
+                )}
+              </h4>
+              <p>
+                T1 {(analysis.aggregate.t1.rate * 100).toFixed(1)}% [
+                {(analysis.aggregate.t1.ci[0] * 100).toFixed(0)}–
+                {(analysis.aggregate.t1.ci[1] * 100).toFixed(0)}] · T2{' '}
+                {(analysis.aggregate.t2.rate * 100).toFixed(1)}% · T3{' '}
+                {(analysis.aggregate.t3.rate * 100).toFixed(1)}%
+                {analysis.aggregate.acpl &&
+                  ` · acpl ${analysis.aggregate.acpl.mean.toFixed(0)}±${analysis.aggregate.acpl.std.toFixed(0)} (n=${analysis.aggregate.acpl.n})`}
+                {analysis.aggregate.accuracyMean &&
+                  ` · accuracy ${analysis.aggregate.accuracyMean.mean.toFixed(1)}`}
+                {analysis.aggregate.timing &&
+                  ` · think median ${(analysis.aggregate.timing.medianMs / 1000).toFixed(1)}s, cv ${analysis.aggregate.timing.coefficientOfVariation.toFixed(2)}, instant ${(analysis.aggregate.timing.instantRate * 100).toFixed(0)}%`}
+              </p>
+            </section>
+          )}
           {analysis && analysis.rows.length > 0 && (
             <table cellPadding={4}>
               <thead>
@@ -203,6 +247,9 @@ export default function App() {
                   <th align="left">exclusions</th>
                   <th align="left">eval sources</th>
                   <th>avg depth</th>
+                  <th>T1/T2/T3</th>
+                  <th>acpl</th>
+                  <th>accuracy (ours/platform)</th>
                 </tr>
               </thead>
               <tbody>
@@ -218,6 +265,18 @@ export default function App() {
                     <td>{row.exclusions}</td>
                     <td>{row.sources}</td>
                     <td align="center">{row.avgDepth}</td>
+                    <td align="center">
+                      {row.player ? `${row.player.t1}/${row.player.t2}/${row.player.t3}` : '—'}
+                    </td>
+                    <td align="center">
+                      {row.player && row.player.cpls.length > 0
+                        ? mean(row.player.cpls).toFixed(0)
+                        : '—'}
+                    </td>
+                    <td align="center">
+                      {row.player?.accuracy?.toFixed(1) ?? '—'} /{' '}
+                      {row.player?.platformAccuracy ?? '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
