@@ -69,7 +69,11 @@ export class UciEngineSession implements LocalEngine {
       await this.waitFor((line) => line === 'uciok');
       this.transport.post('isready');
       await this.waitFor((line) => line === 'readyok');
-    })();
+    })().catch((err: unknown) => {
+      // a failed init (e.g. timeout) must not poison every later evaluate
+      this.initPromise = undefined;
+      throw err;
+    });
     return this.initPromise;
   }
 

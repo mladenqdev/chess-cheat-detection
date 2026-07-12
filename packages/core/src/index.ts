@@ -16,3 +16,4 @@ export * from './metrics/engineMatch';
 export * from './metrics/time';
 export * from './metrics/playerReport';
 export * from './metrics/reportTier';
+export * from './metrics/baselines';
