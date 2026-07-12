@@ -105,8 +105,14 @@ export function compareToCohort(
   const zT1 = z(aggregate.t1.rate, band.t1Rate);
   const zAcpl = z(aggregate.acpl?.mean, band.acpl, true); // lower acpl = more suspicious
   const zAccuracy = z(aggregate.accuracyMean?.mean, band.accuracy);
-  const zInstant = z(aggregate.timing?.instantRate, band.instantRate);
-  const zThinkCv = z(aggregate.timing?.coefficientOfVariation, band.thinkCv, true); // flatter = more suspicious
+  // timing signals are ONE-SIDED: flat timing / instant replies add suspicion,
+  // but varied timing must not subtract it — assistance can fake thinking time
+  const clampSuspicion = (score: number | undefined) =>
+    score === undefined ? undefined : Math.max(0, score);
+  const zInstant = clampSuspicion(z(aggregate.timing?.instantRate, band.instantRate));
+  const zThinkCv = clampSuspicion(
+    z(aggregate.timing?.coefficientOfVariation, band.thinkCv, true), // flatter = more suspicious
+  );
 
   const weighted: [number | undefined, number][] = [
     [zT1, 0.35],

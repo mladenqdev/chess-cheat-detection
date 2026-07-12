@@ -113,6 +113,32 @@ describe('compareToCohort', () => {
     expect(comparison!.provisional).toBe(true);
   });
 
+  it('never lets varied timing subtract suspicion (one-sided timing signals)', () => {
+    const varied = compareToCohort(
+      aggregate({
+        t1: { successes: 0, n: 200, rate: 0.47, ci: [0.4, 0.54] },
+        timing: {
+          n: 180,
+          meanMs: 5000,
+          medianMs: 4000,
+          stdMs: 12000,
+          coefficientOfVariation: 2.4, // wildly varied timing
+          instantRate: 0.0,
+        },
+      }),
+      { timeClass: 'blitz', rating: 1700 },
+      table,
+    );
+    const neutral = compareToCohort(
+      aggregate({ t1: { successes: 0, n: 200, rate: 0.47, ci: [0.4, 0.54] } }),
+      { timeClass: 'blitz', rating: 1700 },
+      table,
+    );
+    expect(varied!.zThinkCv).toBe(0);
+    expect(varied!.zInstant).toBe(0);
+    expect(varied!.composite).toBeCloseTo(neutral!.composite, 5);
+  });
+
   it('skips metrics whose baseline spread is degenerate', () => {
     const degenerate: BaselineTable = {
       ...table,
