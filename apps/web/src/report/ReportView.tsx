@@ -6,12 +6,12 @@ function TierBanner({ data }: { data: ReportData }) {
   if (tier === 'flagged-by-platform') {
     return (
       <section className="tier tier-flagged" role="status">
-        <h2>Closed by the platform</h2>
+        <h2>Already banned by {profile.platform === 'chesscom' ? 'chess.com' : 'lichess'}</h2>
         <p>
           {profile.platform === 'chesscom'
-            ? `chess.com closed this account${profile.banReason === 'fair_play' ? ' for fair-play violations' : ''}.`
-            : 'lichess marked this account for a terms-of-service violation.'}{' '}
-          That is the platform's own public flag, independent of our analysis below.
+            ? `chess.com closed this account${profile.banReason === 'fair_play' ? ' for cheating (their words: fair-play violations)' : ''}.`
+            : 'lichess marked this account for breaking its rules.'}{' '}
+          That's the platform's own public flag — everything below is our independent measurement.
         </p>
       </section>
     );
@@ -19,10 +19,11 @@ function TierBanner({ data }: { data: ReportData }) {
   if (tier === 'insufficient-sample') {
     return (
       <section className="tier tier-insufficient" role="status">
-        <h2>Not enough evidence</h2>
+        <h2>Not enough games to say anything</h2>
         <p>
-          Only {aggregate.eligible} of the required 120 analyzable decisions — no conclusion is
-          statistically defensible on a sample this small. Analyze more games.
+          We could only score {aggregate.eligible} real decisions — we need at least 120 before the
+          numbers mean anything. Lucky streaks look spectacular in small samples. Try analyzing more
+          games.
         </p>
       </section>
     );
@@ -31,22 +32,23 @@ function TierBanner({ data }: { data: ReportData }) {
   const comparison = data.comparison;
   if (comparison && (tier === 'normal' || tier === 'unusual' || tier === 'extreme')) {
     const { band, composite, provisional } = comparison;
-    const cohortLabel = `measured ${band.timeClass} players rated ${band.minRating}–${band.maxRating}`;
+    const group = `real ${band.timeClass} players rated ${band.minRating}–${band.maxRating} that we measured with the same engine`;
+    const score = composite.toFixed(1);
     const content = {
       normal: {
         className: 'tier-neutral',
-        title: 'Consistent with the rating cohort',
-        body: `Engine agreement, mistake profile and timing sit where ${cohortLabel} normally sit (composite anomaly score ${composite.toFixed(1)}).`,
+        title: `Looks like a normal ${band.minRating}–${band.maxRating} ${band.timeClass} player`,
+        body: `We compared this account to ${group}. Its engine agreement, mistake rate and move timing all sit inside the ordinary range — unusualness score ${score}, where 0 is dead average and anything under 2 is unremarkable.`,
       },
       unusual: {
         className: 'tier-insufficient',
-        title: 'Unusual for the rating cohort',
-        body: `Some metrics sit above the typical range of ${cohortLabel} (composite anomaly score ${composite.toFixed(1)}). Unusual is not proof — strong form, preparation or style can do this. More games sharpen the picture.`,
+        title: `Plays better than most ${band.minRating}–${band.maxRating} ${band.timeClass} players`,
+        body: `Compared to ${group}, some of this account's numbers sit above the ordinary range — unusualness score ${score} (under 2 is normal, 2+ is uncommon, 3.5+ almost never happens naturally). Worth attention, not an accusation: good form, opening prep, or a strong player on a new account can look like this. More games sharpen the picture.`,
       },
       extreme: {
         className: 'tier-flagged',
-        title: 'Extremely unusual for the rating cohort',
-        body: `Multiple metrics sit far outside the range of ${cohortLabel} (composite anomaly score ${composite.toFixed(1)}). This level of anomaly is rare among honest players — still statistical evidence, not a verdict.`,
+        title: `Very far from normal ${band.minRating}–${band.maxRating} ${band.timeClass} play`,
+        body: `Compared to ${group}, several of this account's numbers are far outside what honest players produce — unusualness score ${score}, and honest play almost never scores above 3.5. This is strong statistical evidence, not proof; if it matches your suspicion, report the account through the platform's own channels.`,
       },
     }[tier];
     return (
@@ -55,8 +57,8 @@ function TierBanner({ data }: { data: ReportData }) {
         <p>{content.body}</p>
         {provisional && (
           <p className="small muted">
-            Provisional baseline — built from a pilot sample of {band.nPlayers} players; treat as
-            indicative only until full calibration.
+            Heads up: our comparison group for this rating is still small ({band.nPlayers} players),
+            so treat the score as an early read — it firms up as we measure more players.
           </p>
         )}
       </section>
@@ -65,11 +67,11 @@ function TierBanner({ data }: { data: ReportData }) {
 
   return (
     <section className="tier tier-neutral" role="status">
-      <h2>Metrics computed — no verdict</h2>
+      <h2>We measured the play, but can't grade it yet</h2>
       <p>
-        {aggregate.eligible} decisions analyzed across {aggregate.games} games. No calibrated
-        baseline covers this player's rating and time control yet — read the raw values below with
-        their confidence intervals.
+        {aggregate.eligible} decisions across {aggregate.games} games are scored below. We haven't
+        measured enough real players at this rating and time control to know what's normal there —
+        so rather than guess, we show the raw numbers with their uncertainty ranges.
       </p>
     </section>
   );
@@ -109,7 +111,7 @@ function RateCard({
       </p>
       <CiBar rate={rate} />
       <p className="muted small">{hint}</p>
-      {cohort && <p className="muted small cohort-line">cohort: {cohort}</p>}
+      {cohort && <p className="muted small cohort-line">typical here: {cohort}</p>}
     </div>
   );
 }
@@ -130,7 +132,7 @@ function ValueCard({
       <h3>{label}</h3>
       <p className="value">{value}</p>
       <p className="muted small">{hint}</p>
-      {cohort && <p className="muted small cohort-line">cohort: {cohort}</p>}
+      {cohort && <p className="muted small cohort-line">typical here: {cohort}</p>}
     </div>
   );
 }

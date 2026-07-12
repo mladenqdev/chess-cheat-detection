@@ -63,6 +63,18 @@ export function MethodologyPage() {
         tends to flatten that pattern.
       </p>
 
+      <h2>The unusualness score</h2>
+      <p>
+        Every metric above is compared to real players of the same rating and time control that we
+        measured with the same engine: "how far above their average is this account, in standard
+        deviations?" Those distances are then merged into one number — move quality weighs most,
+        timing least — using Stouffer's method, whose key property is that several independently
+        elevated signals add up instead of averaging out. Read it as: 0 = dead average, under 2 =
+        ordinary, 2+ = uncommon, 3.5+ = essentially never happens among honest players. Timing only
+        ever adds suspicion; varied timing doesn't subtract it, because assistance can fake thinking
+        time.
+      </p>
+
       <h2>The 120-decision rule</h2>
       <p>
         Below roughly 120 counted decisions, chance produces spectacular-looking numbers routinely.
