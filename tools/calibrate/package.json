@@ -10,5 +10,8 @@
   "devDependencies": {
     "@types/node": "^26.1.1",
     "tsx": "^4.23.0"
+  },
+  "dependencies": {
+    "@ccm/core": "workspace:*"
   }
 }
