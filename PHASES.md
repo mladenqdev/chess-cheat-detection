@@ -215,6 +215,29 @@ them (`run full` now writes `data/metrics-v2.jsonl`; old v1 datapoints lack per-
 spread/corr and can't be reused for these fields). Test learning: synthetic PVs must be
 ordered best-for-the-mover (ascending white-cp for black) — the engine convention.
 
+## v2 calibration + corrections (2026-07-13)
+
+- **Full v2 run**: 755 players kept across 11 bands (n=43–100 in all main bands; 400–800
+  stays thin — lichess floor). Long-run WASM OOB crash mid-run led to hardening:
+  engine recycled every 25 players, `full.sh` auto-retries and skips completed sampling,
+  no-games players distinguished from a dead engine (dead engine → exit → auto-restart).
+- **Ban-flag correction (user-caught, defamation-grade)**: chess.com plain `closed` was
+  rendered as "banned by chess.com", but it also covers SELF-closed accounts. Now only
+  `closed:fair_play_violations` is a ban; plain `closed` maps to `disabled` and surfaces
+  as a context flag ("closed by its owner" — itself a known pre-ban cheater pattern).
+- **Honest finding on "time follows difficulty"**: measured cohort correlation is
+  ≈ 0.00±0.11 in EVERY band — the PV1−PV2 gap is a weak difficulty proxy inside eligible
+  positions (a small gap between two good moves is often an easy either-works choice),
+  so humans don't show the predicted negative correlation. As built, the metric only
+  fires on positive outliers and will NOT catch flat-timers (they sit at the cohort
+  mean). Kept in the report as information; needs a better difficulty proxy
+  (eval sharpness/volatility, phase-relative time share) to become discriminating.
+  **Consistency measured well**: cohort accuracy spread ±5–11 falling monotonically with
+  rating, σ 2–3.7 — a metronome (±1–2) fires z≈2–3 as intended.
+- Final three-account validation: suspect A (rapid 2130-ish smurf) extreme 3.8; suspect B
+  (proportional 2480 blitz, self-closed next day) normal −1.1 on moves but context box
+  now lists 2-day age, 56 games, self-closure; user's own account normal −0.8.
+
 ## phase 5 — report ui (done 2026-07-12)
 
 ### what was done
