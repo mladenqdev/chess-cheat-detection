@@ -46,7 +46,15 @@ console.log(
     `${gamesPerPlayer} games each, depth 12 multipv 3`,
 );
 
-const { session, terminate } = await createNodeEngine();
+/**
+ * The WASM engine's memory degrades over very long runs (observed: OOB crash
+ * after ~700 players). Recycle it every N players; the outer full.sh retry
+ * loop catches anything that still slips through.
+ */
+const RECYCLE_ENGINE_EVERY = 25;
+
+let engine = await createNodeEngine();
+let playersOnEngine = 0;
 const cache = new MemCache();
 const startedAt = Date.now();
 let processed = 0;
@@ -55,6 +63,11 @@ try {
   for (const band of plan.bands) {
     for (const player of band.players) {
       if (done.has(`${plan.timeClass}:${player.username.toLowerCase()}`)) continue;
+      if (playersOnEngine >= RECYCLE_ENGINE_EVERY) {
+        engine.terminate();
+        engine = await createNodeEngine();
+        playersOnEngine = 0;
+      }
       const label = `[${band.min}-${band.max}] ${player.username} (${player.rating})`;
       try {
         const games = await fetchLichessGames(
@@ -63,7 +76,13 @@ try {
           { userAgent: USER_AGENT },
         );
         const t0 = Date.now();
-        const { perGame } = await analyzePlayerGames(games, player.username, session, cache);
+        const { perGame } = await analyzePlayerGames(
+          games,
+          player.username,
+          engine.session,
+          cache,
+        );
+        playersOnEngine++;
         const row = rawDatapoint(perGame, {
           username: player.username,
           rating: player.rating,
@@ -71,6 +90,12 @@ try {
           bandMin: band.min,
           bandMax: band.max,
         });
+        if (row.eligible === 0) {
+          // a dying engine yields all-no-eval games — do not record the player
+          // as done, so a healthy rerun measures them properly
+          console.error(`${label}: 0 eligible moves (engine unhealthy?) — row not written`);
+          continue;
+        }
         appendFileSync(outPath, JSON.stringify(row) + '\n');
         processed++;
         console.log(
@@ -84,7 +109,7 @@ try {
     }
   }
 } finally {
-  terminate();
+  engine.terminate();
 }
 console.log(
   `done: ${processed} players in ${Math.round((Date.now() - startedAt) / 60_000)}min → ${outPath}`,
