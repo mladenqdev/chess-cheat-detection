@@ -331,6 +331,16 @@ games. All 8 bands (blitz + rapid, 1200–3000, 31 players) now measured. Valida
 real accounts: a user-supplied rapid suspect (2130, acpl 17, accuracy 92.2, account 18
 days old) scored **composite 8.4 → extreme**, while the user's own honest account (rapid 2079) scored **−1.3 → normal** — clean separation with the same algorithm.
 
+**Full calibration completed overnight (2026-07-13)**: 645 player datapoints, 608 kept
+(≥40 eligible moves), 12 bands with n=53–64 everywhere except 400–800 (n=2–3 — lichess
+ratings bottom out ~600–800, as predicted; those bands stay small-group-flagged). The
+curves are textbook-monotonic: T1 22.5→43.0%, acpl 88→24, accuracy 73.9→90.2 across
+bands, rapid think-time cv consistently above blitz. Notable recalibration effect: the
+real population's spreads are wider than the 4-player pilot's artificially tight ones,
+so the suspect's score corrected from 8.4 to 3.7 — still extreme, now honestly so.
+Verification: suspect account "extreme 3.7", user's own account "normal −1.0", both
+without small-group warnings.
+
 The instructive outcome: the first suspect's move metrics sit dead-center in the measured
 2400–3000 cohort (T1 40.9 vs 41.8±2.9, acpl 30 vs 27±2, accuracy 91.0 vs 89.8±0.8) —
 composite −0.8, tier "consistent". **Engine-agreement metrics catch players performing
