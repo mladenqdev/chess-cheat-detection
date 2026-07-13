@@ -20,6 +20,8 @@ const band: BandBaseline = {
   accuracy: { mean: 82, std: 6 },
   instantRate: { mean: 0.1, std: 0.08 },
   thinkCv: { mean: 0.8, std: 0.25 },
+  accuracyStd: { mean: 8, std: 3 },
+  timeComplexityCorr: { mean: -0.25, std: 0.12 },
 };
 
 const table: BaselineTable = {
@@ -137,6 +139,40 @@ describe('compareToCohort', () => {
     expect(varied!.zThinkCv).toBe(0);
     expect(varied!.zInstant).toBe(0);
     expect(varied!.composite).toBeCloseTo(neutral!.composite, 5);
+  });
+
+  it('treats robotic consistency and difficulty-blind timing as one-sided amplifiers', () => {
+    const base = { t1: { successes: 0, n: 200, rate: 0.47, ci: [0.4, 0.54] as [number, number] } };
+    const withoutTimingAnomalies = compareToCohort(
+      aggregate(base),
+      { timeClass: 'blitz', rating: 1700 },
+      table,
+    );
+    const withTimingAnomalies = compareToCohort(
+      aggregate({
+        ...base,
+        accuracyStd: { value: 1, n: 10 }, // metronomic game-to-game accuracy
+        timeComplexityCorr: { value: 0.02, n: 200 }, // time ignores difficulty
+      }),
+      { timeClass: 'blitz', rating: 1700 },
+      table,
+    );
+    expect(withTimingAnomalies!.zConsistency).toBeCloseTo((8 - 1) / 3);
+    expect(withTimingAnomalies!.zTimeBlind).toBeCloseTo((0.02 - -0.25) / 0.12);
+    expect(withTimingAnomalies!.composite).toBeGreaterThan(withoutTimingAnomalies!.composite + 0.5);
+
+    // human-like values (big swings, strongly negative corr) must not exonerate
+    const humanlike = compareToCohort(
+      aggregate({
+        ...base,
+        accuracyStd: { value: 15, n: 10 },
+        timeComplexityCorr: { value: -0.5, n: 200 },
+      }),
+      { timeClass: 'blitz', rating: 1700 },
+      table,
+    );
+    expect(humanlike!.zConsistency).toBe(0);
+    expect(humanlike!.zTimeBlind).toBe(0);
   });
 
   it('skips metrics whose baseline spread is degenerate', () => {

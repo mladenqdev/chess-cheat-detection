@@ -14,7 +14,9 @@ import {
 const game = normalizeLichessGame(JSON.parse(ndjson.split('\n')[0]!) as LichessGame);
 
 /** synthetic evals: pv1 = the actually played move on even plies (white),
- *  pv2 = the played move on odd plies (black); constant small cp everywhere */
+ *  pv2 = the played move on odd plies (black). PVs are ordered best-for-the-mover
+ *  first (the real engine convention), so white plies descend in white-POV cp
+ *  and black plies ascend. */
 const evals: PositionEval[] = game.moves.map((move, ply) => ({
   fen: move.fenBefore,
   depth: 12,
@@ -28,9 +30,9 @@ const evals: PositionEval[] = game.moves.map((move, ply) => ({
           { moves: ['h7h6'], cp: 0 },
         ]
       : [
-          { moves: ['a2a3'], cp: 20 },
+          { moves: ['a2a3'], cp: 0 },
           { moves: [move.uci], cp: 10 },
-          { moves: ['h2h3'], cp: 0 },
+          { moves: ['h2h3'], cp: 20 },
         ],
 }));
 
@@ -48,6 +50,9 @@ describe('computePlayerGameMetrics', () => {
     expect(metrics!.t2).toBe(13);
     expect(metrics!.t3).toBe(13);
     expect(metrics!.thinkMsEligible.length).toBeGreaterThan(0);
+    // every eligible move with a clock and ≥2 PVs yields a (time, difficulty) pair
+    expect(metrics!.timeDifficulty.length).toBe(metrics!.thinkMsEligible.length);
+    expect(metrics!.timeDifficulty[0]!.gapCp).toBe(10); // synthetic evals: pv1 20cp, pv2 10cp
   });
 
   it('scores the white player symmetrically', () => {
@@ -74,6 +79,7 @@ describe('aggregatePlayerMetrics', () => {
     t3: 0,
     cpls: [],
     thinkMsEligible: [],
+    timeDifficulty: [],
     ...over,
   });
 
@@ -91,6 +97,24 @@ describe('aggregatePlayerMetrics', () => {
     expect(a.acpl!.n).toBe(3);
     expect(a.accuracyMean!.mean).toBeCloseTo(85);
     expect(a.sampleOk).toBe(true); // 130 >= 120
+  });
+
+  it('derives consistency and time-difficulty correlation from pooled games', () => {
+    // 5 games, human-like: harder decisions (small gap) get more time
+    const games = Array.from({ length: 5 }, (_, i) =>
+      gameMetrics({
+        eligible: 30,
+        accuracy: 75 + i * 4, // swinging accuracies → healthy spread
+        timeDifficulty: Array.from({ length: 8 }, (_, j) => ({
+          thinkMs: 12_000 - j * 1200 + i * 100,
+          gapCp: j * 25,
+        })),
+      }),
+    );
+    const a = aggregatePlayerMetrics(games);
+    expect(a.accuracyStd!.value).toBeGreaterThan(4);
+    expect(a.timeComplexityCorr!.n).toBe(40);
+    expect(a.timeComplexityCorr!.value).toBeLessThan(-0.8); // strongly human
   });
 
   it('flags insufficient samples', () => {

@@ -33,6 +33,48 @@ export function harmonicMean(xs: number[]): number {
   return xs.length / xs.reduce((acc, x) => acc + 1 / x, 0);
 }
 
+/** ranks with ties averaged (1-based), as Spearman requires */
+function averageRanks(xs: number[]): number[] {
+  const indexed = xs.map((value, index) => ({ value, index }));
+  indexed.sort((a, b) => a.value - b.value);
+  const ranks = new Array<number>(xs.length);
+  let i = 0;
+  while (i < indexed.length) {
+    let j = i;
+    while (j + 1 < indexed.length && indexed[j + 1]!.value === indexed[i]!.value) j++;
+    const rank = (i + j) / 2 + 1;
+    for (let k = i; k <= j; k++) ranks[indexed[k]!.index] = rank;
+    i = j + 1;
+  }
+  return ranks;
+}
+
+/**
+ * Spearman rank correlation: Pearson correlation of the rank vectors.
+ * Robust to outliers and non-linear (but monotonic) relationships — the right
+ * tool for "does thinking time track position difficulty". undefined when
+ * either variable is degenerate or inputs are unusable.
+ */
+export function spearmanCorrelation(xs: number[], ys: number[]): number | undefined {
+  if (xs.length !== ys.length || xs.length < 2) return undefined;
+  const rx = averageRanks(xs);
+  const ry = averageRanks(ys);
+  const mx = mean(rx);
+  const my = mean(ry);
+  let cov = 0;
+  let vx = 0;
+  let vy = 0;
+  for (let i = 0; i < rx.length; i++) {
+    const dx = rx[i]! - mx;
+    const dy = ry[i]! - my;
+    cov += dx * dy;
+    vx += dx * dx;
+    vy += dy * dy;
+  }
+  if (vx === 0 || vy === 0) return undefined;
+  return cov / Math.sqrt(vx * vy);
+}
+
 /**
  * Wilson score interval for a binomial proportion (default 95%).
  * Preferred over the normal approximation for the small/skewed samples

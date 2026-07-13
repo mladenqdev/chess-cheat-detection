@@ -27,6 +27,10 @@ export interface BandBaseline {
   accuracy: MetricBaseline;
   instantRate: MetricBaseline;
   thinkCv: MetricBaseline;
+  /** spread of per-game accuracy within a player (optional: measured since v2 runs) */
+  accuracyStd?: MetricBaseline;
+  /** Spearman corr(think time, PV gap) — humans negative (optional: measured since v2 runs) */
+  timeComplexityCorr?: MetricBaseline;
 }
 
 export interface BaselineTable {
@@ -71,6 +75,10 @@ export interface CohortComparison {
   zAccuracy?: number;
   zInstant?: number;
   zThinkCv?: number;
+  /** too-steady game-to-game accuracy (one-sided) */
+  zConsistency?: number;
+  /** think time ignoring decision difficulty (one-sided) */
+  zTimeBlind?: number;
   composite: number;
   tier: CohortTier;
 }
@@ -79,10 +87,10 @@ const MIN_STD = 1e-6;
 
 function z(
   value: number | undefined,
-  baseline: MetricBaseline,
+  baseline: MetricBaseline | undefined,
   invert = false,
 ): number | undefined {
-  if (value === undefined || baseline.std < MIN_STD) return undefined;
+  if (value === undefined || baseline === undefined || baseline.std < MIN_STD) return undefined;
   const score = (value - baseline.mean) / baseline.std;
   return invert ? -score : score;
 }
@@ -113,13 +121,22 @@ export function compareToCohort(
   const zThinkCv = clampSuspicion(
     z(aggregate.timing?.coefficientOfVariation, band.thinkCv, true), // flatter = more suspicious
   );
+  // steadier-than-human game-to-game accuracy (lower spread = more suspicious)
+  const zConsistency = clampSuspicion(z(aggregate.accuracyStd?.value, band.accuracyStd, true));
+  // think time decoupled from decision difficulty: humans correlate negatively
+  // (hard choice → more time), so a HIGHER correlation than the cohort is suspicious
+  const zTimeBlind = clampSuspicion(
+    z(aggregate.timeComplexityCorr?.value, band.timeComplexityCorr),
+  );
 
   const weighted: [number | undefined, number][] = [
-    [zT1, 0.35],
-    [zAcpl, 0.35],
-    [zAccuracy, 0.2],
-    [zInstant, 0.05],
-    [zThinkCv, 0.05],
+    [zT1, 0.3],
+    [zAcpl, 0.3],
+    [zAccuracy, 0.15],
+    [zConsistency, 0.1],
+    [zTimeBlind, 0.1],
+    [zInstant, 0.025],
+    [zThinkCv, 0.025],
   ];
   let numerator = 0;
   let squaredWeights = 0;
@@ -139,6 +156,8 @@ export function compareToCohort(
     zAccuracy,
     zInstant,
     zThinkCv,
+    zConsistency,
+    zTimeBlind,
     composite,
     tier: composite >= EXTREME_Z ? 'extreme' : composite >= UNUSUAL_Z ? 'unusual' : 'normal',
   };

@@ -4,7 +4,7 @@ import type { NormalizedGame, TimeClass } from '../types';
 import { gameAccuracy, type GameAccuracy } from './accuracy';
 import { moveCentipawnLoss } from './cpl';
 import { engineMatchRank } from './engineMatch';
-import { clamp, mean, stddev, wilsonInterval } from './stats';
+import { clamp, mean, spearmanCorrelation, stddev, wilsonInterval } from './stats';
 import { thinkStats, thinkTimesMs, type ThinkStats } from './time';
 
 /**
@@ -35,6 +35,12 @@ export interface PlayerGameMetrics {
   platformAccuracy?: number;
   /** think times on this player's eligible moves */
   thinkMsEligible: number[];
+  /**
+   * (think time, decision difficulty) pairs on eligible moves; difficulty is
+   * the PV1−PV2 gap in cp from the mover's POV — small gap = genuinely hard
+   * choice. Humans think longer on hard choices; assistance doesn't.
+   */
+  timeDifficulty: { thinkMs: number; gapCp: number }[];
 }
 
 /**
@@ -78,6 +84,7 @@ export function computePlayerGameMetrics(
   let t3 = 0;
   const cpls: number[] = [];
   const thinkMsEligible: number[] = [];
+  const timeDifficulty: { thinkMs: number; gapCp: number }[] = [];
 
   for (const assessment of assessments) {
     if (assessment.moverColor !== color || !assessment.eligible) continue;
@@ -97,6 +104,13 @@ export function computePlayerGameMetrics(
     if (cpl !== undefined) cpls.push(cpl);
     const think = times[assessment.ply];
     if (think !== undefined) thinkMsEligible.push(think);
+    const evalBefore = evals[assessment.ply];
+    if (think !== undefined && evalBefore && evalBefore.pvs.length >= 2) {
+      timeDifficulty.push({
+        thinkMs: think,
+        gapCp: pvScoreCp(evalBefore.pvs[0]!, color) - pvScoreCp(evalBefore.pvs[1]!, color),
+      });
+    }
   }
 
   return {
@@ -115,6 +129,7 @@ export function computePlayerGameMetrics(
     accuracy: gameAccuracyFromPositionEvals(game, evals)[color],
     platformAccuracy: game[color].accuracy,
     thinkMsEligible,
+    timeDifficulty,
   };
 }
 
@@ -135,6 +150,10 @@ export interface PlayerAggregate {
   acpl?: { mean: number; std: number; n: number };
   accuracyMean?: { mean: number; n: number };
   timing?: ThinkStats;
+  /** spread of per-game accuracy — assistance is steadier game-to-game than humans */
+  accuracyStd?: { value: number; n: number };
+  /** Spearman corr(think time, decision difficulty gap): humans negative, assistance ≈ 0 */
+  timeComplexityCorr?: { value: number; n: number };
   /** eligible >= MIN_ELIGIBLE_MOVES — below it, show no conclusions */
   sampleOk: boolean;
 }
@@ -150,6 +169,14 @@ export function aggregatePlayerMetrics(perGame: PlayerGameMetrics[]): PlayerAggr
   const cpls = perGame.flatMap((g) => g.cpls);
   const accuracies = perGame.flatMap((g) => (g.accuracy !== undefined ? [g.accuracy] : []));
   const thinkTimes = perGame.flatMap((g) => g.thinkMsEligible);
+  const pairs = perGame.flatMap((g) => g.timeDifficulty);
+  const corr =
+    pairs.length >= 30
+      ? spearmanCorrelation(
+          pairs.map((p) => p.thinkMs),
+          pairs.map((p) => p.gapCp),
+        )
+      : undefined;
   const sampleOk = eligible >= MIN_ELIGIBLE_MOVES;
 
   return {
@@ -169,6 +196,12 @@ export function aggregatePlayerMetrics(perGame: PlayerGameMetrics[]): PlayerAggr
         ? { mean: mean(accuracies), n: accuracies.length }
         : undefined,
     timing: sampleOk ? thinkStats(thinkTimes) : undefined,
+    accuracyStd:
+      sampleOk && accuracies.length >= 5
+        ? { value: stddev(accuracies), n: accuracies.length }
+        : undefined,
+    timeComplexityCorr:
+      sampleOk && corr !== undefined ? { value: corr, n: pairs.length } : undefined,
     sampleOk,
   };
 }

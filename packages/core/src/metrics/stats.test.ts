@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { harmonicMean, mean, median, stddev, weightedMean, wilsonInterval } from './stats';
+import {
+  harmonicMean,
+  mean,
+  median,
+  spearmanCorrelation,
+  stddev,
+  weightedMean,
+  wilsonInterval,
+} from './stats';
 
 describe('basic stats', () => {
   it('mean, median, stddev', () => {
@@ -15,6 +23,30 @@ describe('basic stats', () => {
     expect(weightedMean([10, 20], [1, 3])).toBeCloseTo(17.5);
     expect(harmonicMean([40, 60])).toBeCloseTo(48);
     expect(harmonicMean([100, 0])).toBe(0); // one zero dominates a harmonic mean
+  });
+});
+
+describe('spearmanCorrelation', () => {
+  it('detects perfect monotonic relationships', () => {
+    expect(spearmanCorrelation([1, 2, 3, 4], [10, 20, 25, 90])).toBeCloseTo(1);
+    expect(spearmanCorrelation([1, 2, 3, 4], [90, 25, 20, 10])).toBeCloseTo(-1);
+  });
+
+  it('is near zero for unrelated data', () => {
+    const xs = [1, 2, 3, 4, 5, 6, 7, 8];
+    const ys = [5, 1, 8, 2, 7, 3, 6, 4];
+    expect(Math.abs(spearmanCorrelation(xs, ys)!)).toBeLessThan(0.3);
+  });
+
+  it('handles ties via average ranks', () => {
+    // xs has ties; a monotonic trend must still register strongly
+    expect(spearmanCorrelation([1, 1, 2, 2, 3, 3], [1, 2, 3, 4, 5, 6])!).toBeGreaterThan(0.9);
+  });
+
+  it('returns undefined for degenerate inputs', () => {
+    expect(spearmanCorrelation([1, 1, 1], [1, 2, 3])).toBeUndefined(); // constant xs
+    expect(spearmanCorrelation([1], [2])).toBeUndefined(); // too short
+    expect(spearmanCorrelation([1, 2], [1, 2, 3])).toBeUndefined(); // length mismatch
   });
 });
 
