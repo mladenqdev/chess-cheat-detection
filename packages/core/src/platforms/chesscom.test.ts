@@ -70,6 +70,13 @@ describe('normalizeChesscomProfile', () => {
     });
   });
 
+  it('does not treat a self-closed account as banned', () => {
+    const profile = normalizeChesscomProfile({ username: 'quitter', status: 'closed' }, {});
+    expect(profile.banned).toBe(false);
+    expect(profile.banReason).toBeUndefined();
+    expect(profile.disabled).toBe(true);
+  });
+
   it('aggregates ratings and total games from stats', () => {
     const profile = normalizeChesscomProfile({ username: 'hikaru', status: 'premium' }, stats);
     expect(profile.banned).toBe(false);

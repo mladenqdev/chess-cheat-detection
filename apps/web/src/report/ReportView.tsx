@@ -177,6 +177,9 @@ function ContextFlags({ data }: { data: ReportData }) {
   if (profile.totalGames !== undefined && profile.totalGames < FEW_GAMES) {
     flags.push(`only ${profile.totalGames} games ever played`);
   }
+  if (profile.disabled) {
+    flags.push('the account has since been closed by its owner');
+  }
   const peak = Math.max(0, ...Object.values(profile.ratings));
   if (flags.length > 0 && peak >= HIGH_RATING) {
     flags.push(`already rated ${peak}`);

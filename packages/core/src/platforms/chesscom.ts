@@ -174,7 +174,10 @@ export function normalizeChesscomProfile(
     }
   }
 
-  const banned = profile.status.startsWith('closed');
+  // only the explicit fair-play status is a platform ban; plain "closed" means
+  // the account was closed (usually by its owner) WITHOUT a cheating flag —
+  // calling that "banned" would defame self-closed accounts
+  const flagged = profile.status === 'closed:fair_play_violations';
   return {
     platform: 'chesscom',
     username: profile.username,
@@ -182,12 +185,9 @@ export function normalizeChesscomProfile(
     createdAt: profile.joined !== undefined ? profile.joined * 1000 : undefined,
     totalGames: sawRecord ? totalGames : undefined,
     ratings,
-    banned,
-    banReason: banned
-      ? profile.status === 'closed:fair_play_violations'
-        ? 'fair_play'
-        : 'other'
-      : undefined,
+    banned: flagged,
+    banReason: flagged ? 'fair_play' : undefined,
+    disabled: profile.status === 'closed' ? true : undefined,
   };
 }
 
