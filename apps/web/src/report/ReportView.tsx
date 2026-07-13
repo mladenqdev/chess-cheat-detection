@@ -321,6 +321,28 @@ export function ReportView({ data }: { data: ReportData }) {
             ).toFixed(0)}% instant replies in real decisions.`}
           />
         )}
+        {aggregate.accuracyStd && (
+          <ValueCard
+            label="Consistency across games"
+            value={`± ${aggregate.accuracyStd.value.toFixed(1)}`}
+            hint="How much game accuracy swings between games. Humans swing — form, tilt, time trouble; assistance is steady. An unusually LOW number is the red flag."
+            cohort={
+              band?.accuracyStd &&
+              `± ${band.accuracyStd.mean.toFixed(1)}±${band.accuracyStd.std.toFixed(1)}`
+            }
+          />
+        )}
+        {aggregate.timeComplexityCorr && (
+          <ValueCard
+            label="Time follows difficulty"
+            value={aggregate.timeComplexityCorr.value.toFixed(2)}
+            hint="Whether thinking time tracks how hard each decision was. Humans think longer on hard moves (clearly negative number); assistance plays at its own pace regardless (near zero)."
+            cohort={
+              band?.timeComplexityCorr &&
+              `${band.timeComplexityCorr.mean.toFixed(2)}±${band.timeComplexityCorr.std.toFixed(2)}`
+            }
+          />
+        )}
       </section>
 
       <section>

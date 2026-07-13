@@ -63,6 +63,14 @@ export function MethodologyPage() {
         tends to flatten that pattern.
       </p>
 
+      <p>
+        <strong>Consistency and clock behavior.</strong> Two human signatures round out the picture:
+        how much game accuracy swings from game to game (humans have bad days; assistance is
+        steady), and whether thinking time tracks how hard each decision was (humans think longer on
+        hard moves; assistance plays at its own pace regardless). Both signals only ever add
+        suspicion — looking human on them doesn't subtract it, because assistance can fake variety.
+      </p>
+
       <h2>The unusualness score</h2>
       <p>
         Every metric above is compared to real players of the same rating and time control that we
@@ -93,8 +101,10 @@ export function MethodologyPage() {
           on a new account, or plain good form.
         </li>
         <li>
-          Cohort calibration is in progress: until measured baselines per rating band ship, the
-          report shows raw values with confidence intervals and no normal/unusual verdict tier.
+          Coverage limits: comparison groups are measured for blitz and rapid, roughly 400–3000.
+          Bullet, classical, and ratings outside that range show raw numbers without a grade. The
+          groups are measured on lichess; chess.com ratings run lower at the same strength, which
+          makes the comparison conservative (harder to flag, not easier).
         </li>
       </ul>
 
