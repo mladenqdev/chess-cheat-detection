@@ -34,11 +34,22 @@ function TierBanner({ data }: { data: ReportData }) {
     const { band, composite, provisional } = comparison;
     const group = `real ${band.timeClass} players rated ${band.minRating}–${band.maxRating} that we measured with the same engine`;
     const score = composite.toFixed(1);
+    // a very new, barely-played account already at a high rating: its rating IS
+    // its own (possibly assisted) play, so "normal for the rating" proves little
+    const freshHighProfile =
+      profile.createdAt !== undefined &&
+      data.finishedAt - profile.createdAt < FRESH_ACCOUNT_DAYS * 86_400_000 &&
+      (profile.totalGames ?? Number.MAX_SAFE_INTEGER) < FEW_GAMES &&
+      Math.max(0, ...Object.values(profile.ratings)) >= HIGH_RATING;
     const content = {
       normal: {
         className: 'tier-neutral',
         title: `Looks like a normal ${band.minRating}–${band.maxRating} ${band.timeClass} player`,
-        body: `We compared this account to ${group}. Its engine agreement, mistake rate and move timing all sit inside the ordinary range — unusualness score ${score}, where 0 is dead average and anything under 2 is unremarkable.`,
+        body:
+          `We compared this account to ${group}. Its engine agreement, mistake rate and move timing all sit inside the ordinary range — unusualness score ${score}, where 0 is dead average and anything under 2 is unremarkable.` +
+          (freshHighProfile
+            ? ' Important: this account is brand new and already plays at a high level — for such accounts, move quality cannot distinguish a strong player on a fresh account from assistance playing in proportion to its rating. This result is NOT an all-clear; weigh the context below heavily.'
+            : ''),
       },
       unusual: {
         className: 'tier-insufficient',
