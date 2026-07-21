@@ -215,6 +215,27 @@ them (`run full` now writes `data/metrics-v2.jsonl`; old v1 datapoints lack per-
 spread/corr and can't be reused for these fields). Test learning: synthetic PVs must be
 ordered best-for-the-mover (ascending white-cp for black) — the engine convention.
 
+## phase 7 — deploy (done 2026-07-21) — LIVE
+
+- **Live at https://chess-cheat-detection.com** (Cloudflare Workers Static Assets).
+- Deploy path: Cloudflare's new Workers Builds flow (not classic Pages) — needs a
+  `wrangler.toml` at repo root with `[assets] directory = "./apps/web/dist"` and
+  `not_found_handling = "single-page-application"` (SPA fallback for /methodology, /u/...).
+  Build command `pnpm run build`, deploy command `npx wrangler deploy`. Every push to main
+  auto-redeploys. Static assets = free/unlimited bandwidth (matters for the 7MB WASM).
+- Routing switched from hash (#/...) to real paths so Google indexes /methodology; old
+  hash links redirect. SEO: meta/OG/JSON-LD/canonical, robots.txt, sitemap.xml.
+- PWA: manifest + gold-pawn icons (180/192/512) + cache-first service worker for
+  /engine/, /assets/, /icons/ (fast app opens; never caches navigations or API calls).
+- **Domain note**: registered domain is `chess-cheat-detection.com` (WITH hyphens); the
+  visible wordmark/brand stays `chesscheatdetection` (no hyphens) — intentional mismatch,
+  user's choice. All URL metadata (canonical, sitemap, User-Agent) points to the
+  hyphenated registered domain.
+- Repo renamed on GitHub: chess-cheat-metrics → chess-cheat-detection (local folder still
+  chess-cheat-metrics, harmless).
+- TODO post-launch: submit sitemap in Google Search Console; consider og-image; optionally
+  buy chesscheatdetection.com (no hyphens) as a 301 redirect.
+
 ## copy + honesty pass (2026-07-21)
 
 - Plain-language rewrite of all report copy (user feedback: "average joe" must understand
