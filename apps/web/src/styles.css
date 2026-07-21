@@ -119,6 +119,38 @@ a {
   min-width: 12rem;
 }
 
+.search select {
+  appearance: none;
+  padding-right: 2.1rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a89f8c' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+}
+
+@media (prefers-color-scheme: light) {
+  .search select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236f6754' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  }
+}
+
+/* mobile: 2x2 grid so the selects share the left column and the
+   username input lines up with the analyze button on the right */
+@media (max-width: 640px) {
+  .search {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+  }
+  .search select {
+    width: 100%;
+  }
+  .search input {
+    min-width: 0;
+  }
+  .search button {
+    width: 100%;
+  }
+}
+
 .search button {
   background: var(--accent);
   color: var(--accent-contrast);

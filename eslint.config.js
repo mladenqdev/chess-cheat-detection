@@ -5,8 +5,9 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  // public/engine holds the vendored stockfish build (copied by scripts/copy-engine.mjs)
-  { ignores: ['**/dist/**', '**/node_modules/**', 'apps/web/public/engine/**'] },
+  // public/ holds runtime assets: the vendored stockfish build, the service
+  // worker (worker globals), icons — not application code to lint
+  { ignores: ['**/dist/**', '**/node_modules/**', 'apps/web/public/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
