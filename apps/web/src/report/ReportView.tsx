@@ -14,6 +14,19 @@ function usually(baseline: MetricBaseline, digits = 0): string {
   return baseline.mean.toFixed(digits);
 }
 
+/**
+ * Turns the pace-evenness comparison into words: how flat this player's move
+ * times are versus measured players at the same rating. Same one-sided logic
+ * the unusualness score uses.
+ */
+function paceVerdict(playerCv: number, baseline: MetricBaseline | undefined): string {
+  if (!baseline || baseline.std < 0.01) return '';
+  const flatness = (baseline.mean - playerCv) / baseline.std;
+  if (flatness >= 2) return "This player's pace is suspiciously even.";
+  if (flatness >= 1) return "This player's pace is steadier than most.";
+  return "This player's pace varies like a human's.";
+}
+
 function TierBanner({ data }: { data: ReportData }) {
   const { tier, profile, aggregate } = data;
   if (tier === 'flagged-by-platform') {
@@ -334,7 +347,14 @@ export function ReportView({ data }: { data: ReportData }) {
           <ValueCard
             label="Move timing"
             value={`${(aggregate.timing.medianMs / 1000).toFixed(1)}s median`}
-            hint={`Typical time spent per move. ${(aggregate.timing.instantRate * 100).toFixed(0)}% of their real decisions got an instant reply. People vary their pace a lot; a very even pace is a warning sign.`}
+            hint={`People speed up and slow down; assistance keeps an even pace. ${paceVerdict(
+              aggregate.timing.coefficientOfVariation,
+              band?.thinkCv,
+            )}${
+              aggregate.timing.instantRate >= 0.05
+                ? ` ${(aggregate.timing.instantRate * 100).toFixed(0)}% of their hard moves got an instant reply.`
+                : ''
+            }`}
           />
         )}
         {aggregate.accuracyStd && (
