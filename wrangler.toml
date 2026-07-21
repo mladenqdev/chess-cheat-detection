@@ -1,0 +1,10 @@
+# Cloudflare deploy config: serve the built static site (no Worker code).
+# `npx wrangler deploy` reads this; `pnpm build` produces apps/web/dist.
+name = "chess-cheat-detection"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "./apps/web/dist"
+# any path that isn't a real file returns index.html, so client-side routes
+# (/methodology, /u/<platform>/<user>) work
+not_found_handling = "single-page-application"
