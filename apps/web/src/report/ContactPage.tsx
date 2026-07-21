@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 // design (it only authorizes sending TO the account's verified email), so it's
 // safe in client code. Get it in 30s at https://web3forms.com (sign up with
 // mladenqdev@gmail.com) and paste it below.
-const WEB3FORMS_ACCESS_KEY = 'REPLACE_WITH_YOUR_WEB3FORMS_KEY';
+const WEB3FORMS_ACCESS_KEY = 'b2cf810a-8835-4206-9a88-99bad1c67fed';
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 

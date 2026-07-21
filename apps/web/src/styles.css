@@ -302,36 +302,41 @@ a {
   border-radius: 12px;
 }
 
-.share-brand {
-  text-align: right;
-  margin: 0.6rem 0.2rem 0;
-  letter-spacing: 0.03em;
-}
-
-.report-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin: 0.6rem 0 0.25rem;
-}
-
-.report-actions button {
+/* the export button lives in the empty grid cell, styled like a card */
+.export-card {
   font: inherit;
-  font-size: 0.85rem;
-  padding: 0.4rem 0.9rem;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--text);
+  font-size: 0.9rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   cursor: pointer;
 }
 
-.report-actions button:hover:not(:disabled) {
+.export-card:hover:not(:disabled) {
   border-color: var(--accent);
+  color: var(--text);
 }
 
-.report-actions button:disabled {
+.export-card:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+
+/* the brand watermark: hidden on screen, shown only during image capture */
+.export-only {
+  display: none;
+}
+
+.share-brand {
+  text-align: right;
+  margin: 0.6rem 0.4rem 0.2rem;
+  letter-spacing: 0.03em;
+}
+
+.share-card.is-exporting .export-only {
+  display: block;
 }
 
 .contact {

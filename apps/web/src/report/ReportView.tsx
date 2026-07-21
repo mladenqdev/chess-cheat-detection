@@ -297,16 +297,24 @@ export function ReportView({ data }: { data: ReportData }) {
   const [exporting, setExporting] = useState(false);
 
   async function onExport() {
-    if (!shareRef.current || exporting) return;
+    const el = shareRef.current;
+    if (!el || exporting) return;
     setExporting(true);
+    // reveal the brand watermark and drop the export button for the capture only
+    el.classList.add('is-exporting');
     try {
       const bg = getComputedStyle(document.body).backgroundColor;
-      const dataUrl = await toPng(shareRef.current, { pixelRatio: 2, backgroundColor: bg });
+      const dataUrl = await toPng(el, {
+        pixelRatio: 2,
+        backgroundColor: bg,
+        filter: (node) => !(node instanceof HTMLElement && node.classList.contains('no-export')),
+      });
       const link = document.createElement('a');
       link.download = `${profile.username}-chess-cheat-detection.png`;
       link.href = dataUrl;
       link.click();
     } finally {
+      el.classList.remove('is-exporting');
       setExporting(false);
     }
   }
@@ -385,14 +393,18 @@ export function ReportView({ data }: { data: ReportData }) {
               cohort={band?.accuracyStd && `${usually(band.accuracyStd, 1)} points`}
             />
           )}
+          {/* sits in the empty grid cell; excluded from the exported image via no-export */}
+          <button
+            type="button"
+            className="card metric export-card no-export"
+            onClick={onExport}
+            disabled={exporting}
+          >
+            {exporting ? 'exporting…' : 'export as image'}
+          </button>
         </section>
-        <p className="share-brand muted small">chess-cheat-detection.com</p>
-      </div>
-
-      <div className="report-actions">
-        <button type="button" onClick={onExport} disabled={exporting}>
-          {exporting ? 'exporting…' : 'export as image'}
-        </button>
+        {/* hidden on screen; revealed only while the image is being captured */}
+        <p className="share-brand export-only muted small">chess-cheat-detection.com</p>
       </div>
 
       <p className="muted small">
