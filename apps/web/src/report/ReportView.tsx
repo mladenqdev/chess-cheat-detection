@@ -5,17 +5,13 @@ const FRESH_ACCOUNT_DAYS = 90;
 const FEW_GAMES = 300;
 const HIGH_RATING = 2200;
 
-/** "usually 38 to 48%" style range: mean plus/minus one spread, for average-joe reading */
+/** the measured cohort mean, shown as "average player: <stat>" under each card */
 function usuallyPct(baseline: MetricBaseline): string {
-  const lo = Math.max(0, (baseline.mean - baseline.std) * 100);
-  const hi = (baseline.mean + baseline.std) * 100;
-  return `usually ${lo.toFixed(0)} to ${hi.toFixed(0)}%`;
+  return `${(baseline.mean * 100).toFixed(0)}%`;
 }
 
 function usually(baseline: MetricBaseline, digits = 0): string {
-  const lo = baseline.mean - baseline.std;
-  const hi = baseline.mean + baseline.std;
-  return `usually ${lo.toFixed(digits)} to ${hi.toFixed(digits)}`;
+  return baseline.mean.toFixed(digits);
 }
 
 function TierBanner({ data }: { data: ReportData }) {
@@ -140,7 +136,7 @@ function RateCard({
       </p>
       <CiBar rate={rate} />
       <p className="muted small">{hint}</p>
-      {cohort && <p className="muted small cohort-line">honest players here: {cohort}</p>}
+      {cohort && <p className="muted small cohort-line">average player: {cohort}</p>}
     </div>
   );
 }
@@ -161,7 +157,7 @@ function ValueCard({
       <h3>{label}</h3>
       <p className="value">{value}</p>
       <p className="muted small">{hint}</p>
-      {cohort && <p className="muted small cohort-line">honest players here: {cohort}</p>}
+      {cohort && <p className="muted small cohort-line">average player: {cohort}</p>}
     </div>
   );
 }
@@ -359,8 +355,8 @@ export function ReportView({ data }: { data: ReportData }) {
         )}
       </section>
       <p className="muted small">
-        Brackets show the likely true range given how many moves we could score. "Honest players
-        here" shows what real, measured players at this rating produce.
+        Brackets show the likely true range given how many moves we could score. "Average player"
+        shows what a typical measured player at this rating scores.
       </p>
 
       <section>
