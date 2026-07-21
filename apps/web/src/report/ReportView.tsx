@@ -341,7 +341,7 @@ export function ReportView({ data }: { data: ReportData }) {
           <ValueCard
             label="Consistency across games"
             value={`${aggregate.accuracyStd.value.toFixed(1)} points`}
-            hint="A typical game lands about this many accuracy points above or below their own average. Everyone has good and bad games; a very small swing means suspiciously steady play."
+            hint="Everyone has good and bad games; a very small swing means suspiciously steady play."
             cohort={band?.accuracyStd && `${usually(band.accuracyStd, 1)} points`}
           />
         )}
