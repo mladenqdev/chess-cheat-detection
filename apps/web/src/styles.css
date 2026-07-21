@@ -64,6 +64,11 @@ body {
   padding: 1rem 0 0.25rem;
 }
 
+.topnav-links {
+  display: flex;
+  gap: 1.25rem;
+}
+
 .topnav a {
   color: var(--muted);
   text-decoration: none;
@@ -288,6 +293,101 @@ a {
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
+}
+
+/* the region captured into the shared PNG; padding so the export has margins */
+.share-card {
+  background: var(--bg);
+  padding: 0.5rem;
+  border-radius: 12px;
+}
+
+.share-brand {
+  text-align: right;
+  margin: 0.6rem 0.2rem 0;
+  letter-spacing: 0.03em;
+}
+
+.report-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.6rem 0 0.25rem;
+}
+
+.report-actions button {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.report-actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.report-actions button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.contact {
+  max-width: 560px;
+}
+
+.contact h1 {
+  margin-top: 2rem;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.contact-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.contact-form input,
+.contact-form textarea {
+  font: inherit;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  resize: vertical;
+}
+
+.contact-form button {
+  align-self: flex-start;
+  font: inherit;
+  font-weight: 600;
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  cursor: pointer;
+}
+
+.contact-form button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.contact-form .error {
+  color: var(--error);
+  font-size: 0.9rem;
 }
 
 .section-title {

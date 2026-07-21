@@ -215,6 +215,22 @@ them (`run full` now writes `data/metrics-v2.jsonl`; old v1 datapoints lack per-
 spread/corr and can't be reused for these fields). Test learning: synthetic PVs must be
 ordered best-for-the-mover (ascending white-cp for black) — the engine convention.
 
+## post-launch additions (2026-07-22)
+
+- **Report image export**: `export as image` button uses html-to-image `toPng` on a
+  `.share-card` wrapper (header + tier + context + metric grid + brand line); the analyzed
+  games table and legend are intentionally OUTSIDE the capture. Filename
+  `<username>-chess-cheat-detection.png`, pixelRatio 2. Natural sharing for the audience
+  (screenshots in Reddit/Discord). No backend needed — the deep-link `/u/<platform>/<user>`
+  already re-runs analysis for anyone.
+- **Contact page** (`/contact`, nav link): Web3Forms relay → mladenqdev@gmail.com, no
+  backend. **ACTION NEEDED: replace `WEB3FORMS_ACCESS_KEY` placeholder in
+  ContactPage.tsx** with the free key from web3forms.com (30s signup with that email) —
+  the form renders but won't deliver until the key is set. The key is public-by-design
+  (only authorizes sending to the account's verified email), safe in client code.
+- **Buy Me a Coffee** link in footer → buymeacoffee.com/mladenq.
+- sitemap.xml updated with /contact.
+
 ## phase 7 — deploy (done 2026-07-21) — LIVE
 
 - **Live at https://chess-cheat-detection.com** (Cloudflare Workers Static Assets).

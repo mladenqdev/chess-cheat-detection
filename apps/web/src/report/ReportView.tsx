@@ -1,4 +1,6 @@
 import { mean, type MetricBaseline, type RateWithCi } from '@ccm/core';
+import { toPng } from 'html-to-image';
+import { useRef, useState } from 'react';
 import type { AnalyzedGame, ReportData } from './useReport';
 
 const FRESH_ACCOUNT_DAYS = 90;
@@ -291,80 +293,108 @@ function GamesTable({ games }: { games: AnalyzedGame[] }) {
 export function ReportView({ data }: { data: ReportData }) {
   const { profile, aggregate } = data;
   const band = data.comparison?.band;
+  const shareRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
+
+  async function onExport() {
+    if (!shareRef.current || exporting) return;
+    setExporting(true);
+    try {
+      const bg = getComputedStyle(document.body).backgroundColor;
+      const dataUrl = await toPng(shareRef.current, { pixelRatio: 2, backgroundColor: bg });
+      const link = document.createElement('a');
+      link.download = `${profile.username}-chess-cheat-detection.png`;
+      link.href = dataUrl;
+      link.click();
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <article className="report">
-      <header className="report-header">
-        <h2>
-          {profile.username}
-          <span className="muted">
-            {' '}
-            · {profile.platform === 'lichess' ? 'lichess' : 'chess.com'}
-          </span>
-        </h2>
-        <AccountContext data={data} />
-      </header>
+      <div className="share-card" ref={shareRef}>
+        <header className="report-header">
+          <h2>
+            {profile.username}
+            <span className="muted">
+              {' '}
+              · {profile.platform === 'lichess' ? 'lichess' : 'chess.com'}
+            </span>
+          </h2>
+          <AccountContext data={data} />
+        </header>
 
-      <TierBanner data={data} />
-      <ContextFlags data={data} />
+        <TierBanner data={data} />
+        <ContextFlags data={data} />
 
-      <section className="metric-grid">
-        <RateCard
-          label="Top engine move"
-          rate={aggregate.t1}
-          hint="How often they played the computer's number one choice in positions with a real decision to make."
-          normalRange={band?.t1Rate}
-        />
-        <RateCard
-          label="Top-2 moves"
-          rate={aggregate.t2}
-          hint="How often their move was one of the computer's two best."
-          normalRange={band?.t2Rate}
-        />
-        <RateCard
-          label="Top-3 moves"
-          rate={aggregate.t3}
-          hint="How often their move was one of the computer's three best."
-          normalRange={band?.t3Rate}
-        />
-        {aggregate.acpl && (
-          <ValueCard
-            label="Mistake size"
-            value={`${(aggregate.acpl.mean / 100).toFixed(2)} pawns`}
-            hint="How much advantage the average move gives away. Engine play loses almost nothing."
-            cohort={band && `${(band.acpl.mean / 100).toFixed(2)} pawns`}
+        <section className="metric-grid">
+          <RateCard
+            label="Top engine move"
+            rate={aggregate.t1}
+            hint="How often they played the computer's number one choice in positions with a real decision to make."
+            normalRange={band?.t1Rate}
           />
-        )}
-        {aggregate.accuracyMean && (
-          <ValueCard
-            label="Accuracy"
-            value={aggregate.accuracyMean.mean.toFixed(1)}
-            hint="The accuracy score lichess shows after a game; 100 is computer-perfect."
-            cohort={band && usually(band.accuracy, 1)}
+          <RateCard
+            label="Top-2 moves"
+            rate={aggregate.t2}
+            hint="How often their move was one of the computer's two best."
+            normalRange={band?.t2Rate}
           />
-        )}
-        {aggregate.timing && (
-          <ValueCard
-            label="Move timing"
-            value={`${(aggregate.timing.medianMs / 1000).toFixed(1)}s median`}
-            hint={`People speed up and slow down; assistance keeps an even pace. ${paceVerdict(
-              aggregate.timing.coefficientOfVariation,
-              band?.thinkCv,
-            )}${
-              aggregate.timing.instantRate >= 0.05
-                ? ` ${(aggregate.timing.instantRate * 100).toFixed(0)}% of their hard moves got an instant reply.`
-                : ''
-            }`}
+          <RateCard
+            label="Top-3 moves"
+            rate={aggregate.t3}
+            hint="How often their move was one of the computer's three best."
+            normalRange={band?.t3Rate}
           />
-        )}
-        {aggregate.accuracyStd && (
-          <ValueCard
-            label="Consistency"
-            value={`${aggregate.accuracyStd.value.toFixed(1)} points`}
-            hint="Everyone has good and bad games; a very small swing means suspiciously steady play."
-            cohort={band?.accuracyStd && `${usually(band.accuracyStd, 1)} points`}
-          />
-        )}
-      </section>
+          {aggregate.acpl && (
+            <ValueCard
+              label="Mistake size"
+              value={`${(aggregate.acpl.mean / 100).toFixed(2)} pawns`}
+              hint="How much advantage the average move gives away. Engine play loses almost nothing."
+              cohort={band && `${(band.acpl.mean / 100).toFixed(2)} pawns`}
+            />
+          )}
+          {aggregate.accuracyMean && (
+            <ValueCard
+              label="Accuracy"
+              value={aggregate.accuracyMean.mean.toFixed(1)}
+              hint="The accuracy score lichess shows after a game; 100 is computer-perfect."
+              cohort={band && usually(band.accuracy, 1)}
+            />
+          )}
+          {aggregate.timing && (
+            <ValueCard
+              label="Move timing"
+              value={`${(aggregate.timing.medianMs / 1000).toFixed(1)}s median`}
+              hint={`People speed up and slow down; assistance keeps an even pace. ${paceVerdict(
+                aggregate.timing.coefficientOfVariation,
+                band?.thinkCv,
+              )}${
+                aggregate.timing.instantRate >= 0.05
+                  ? ` ${(aggregate.timing.instantRate * 100).toFixed(0)}% of their hard moves got an instant reply.`
+                  : ''
+              }`}
+            />
+          )}
+          {aggregate.accuracyStd && (
+            <ValueCard
+              label="Consistency"
+              value={`${aggregate.accuracyStd.value.toFixed(1)} points`}
+              hint="Everyone has good and bad games; a very small swing means suspiciously steady play."
+              cohort={band?.accuracyStd && `${usually(band.accuracyStd, 1)} points`}
+            />
+          )}
+        </section>
+        <p className="share-brand muted small">chess-cheat-detection.com</p>
+      </div>
+
+      <div className="report-actions">
+        <button type="button" onClick={onExport} disabled={exporting}>
+          {exporting ? 'exporting…' : 'export as image'}
+        </button>
+      </div>
+
       <p className="muted small">
         On the match cards, the bracket and shaded strip show the normal range for measured players
         at this rating, and the marker is this player. "Average player" shows the typical value at
