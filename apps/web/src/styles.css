@@ -138,20 +138,20 @@ a {
   }
 }
 
-/* mobile: 2x2 grid so the selects share the left column and the
-   username input lines up with the analyze button on the right */
+/* mobile: two equal columns (platform|username, time|games) with the analyze
+   button spanning the full width on its own row */
 @media (max-width: 640px) {
   .search {
     display: grid;
-    grid-template-columns: max-content 1fr;
+    grid-template-columns: 1fr 1fr;
   }
-  .search select {
-    width: 100%;
-  }
+  .search select,
   .search input {
+    width: 100%;
     min-width: 0;
   }
-  .search button {
+  .search .analyze-btn {
+    grid-column: 1 / -1;
     width: 100%;
   }
 }

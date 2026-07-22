@@ -1,9 +1,16 @@
-import type { Platform } from '@ccm/core';
+import type { Platform, TimeClass } from '@ccm/core';
 import { useEffect, useState, type FormEvent } from 'react';
 import { ReportView } from './ReportView';
 import { parseReportPath, useReport, type ReportState } from './useReport';
 
 const GAME_COUNTS = [10, 20, 30, 50];
+
+type TimeMode = 'both' | 'blitz' | 'rapid';
+const TIME_CLASSES: Record<TimeMode, TimeClass[]> = {
+  both: ['blitz', 'rapid'],
+  blitz: ['blitz'],
+  rapid: ['rapid'],
+};
 
 function ProgressView({ state }: { state: ReportState & { phase: 'analyzing' } }) {
   const { currentGame, gameIndex, gamesTotal, positionsDone, positionsTotal } = state;
@@ -32,6 +39,7 @@ export function ReportPage() {
   const [username, setUsername] = useState(
     () => parseReportPath(window.location.pathname)?.username ?? '',
   );
+  const [timeMode, setTimeMode] = useState<TimeMode>('both');
   const [maxGames, setMaxGames] = useState(20);
   const { state, run } = useReport();
 
@@ -45,7 +53,7 @@ export function ReportPage() {
     const name = username.trim();
     if (!name || state.phase === 'fetching' || state.phase === 'analyzing') return;
     window.history.pushState({}, '', `/u/${platform}/${name}`);
-    void run(platform, name, maxGames);
+    void run(platform, name, maxGames, TIME_CLASSES[timeMode]);
   }
 
   const busy = state.phase === 'fetching' || state.phase === 'analyzing';
@@ -75,6 +83,15 @@ export function ReportPage() {
             required
           />
           <select
+            value={timeMode}
+            aria-label="time control"
+            onChange={(e) => setTimeMode(e.target.value as TimeMode)}
+          >
+            <option value="both">blitz + rapid</option>
+            <option value="blitz">blitz</option>
+            <option value="rapid">rapid</option>
+          </select>
+          <select
             value={maxGames}
             aria-label="games to analyze"
             onChange={(e) => setMaxGames(Number(e.target.value))}
@@ -85,7 +102,7 @@ export function ReportPage() {
               </option>
             ))}
           </select>
-          <button type="submit" disabled={busy}>
+          <button type="submit" className="analyze-btn" disabled={busy}>
             {busy ? 'working…' : 'analyze'}
           </button>
         </form>
@@ -101,10 +118,10 @@ export function ReportPage() {
         <section className="panel" aria-live="polite">
           <h2>No blitz or rapid games to analyze</h2>
           <p>
-            {state.profile.username} has no recent blitz or rapid games, and those are the only
-            ones we analyze. Bullet is too fast and noisy for reliable signals (premoves,
-            flagging, time scrambles), and correspondence lets players use opening books and
-            engines legally, so cheat signals don't apply there.
+            {state.profile.username} has no recent blitz or rapid games, and those are the only ones
+            we analyze. Bullet is too fast and noisy for reliable signals (premoves, flagging, time
+            scrambles), and correspondence lets players use opening books and engines legally, so
+            cheat signals don't apply there.
           </p>
         </section>
       )}

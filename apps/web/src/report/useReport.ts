@@ -113,98 +113,98 @@ export function useReport() {
   const [state, setState] = useState<ReportState>({ phase: 'idle' });
   const running = useRef(false);
 
-  const run = useCallback(async (platform: Platform, username: string, maxGames: number) => {
-    if (running.current) return;
-    running.current = true;
-    setState({ phase: 'fetching', username });
-    try {
-      const opts = { cache: idbCache };
-      const [profile, games] =
-        platform === 'lichess'
-          ? await Promise.all([
-              fetchLichessProfile(username, opts),
-              fetchLichessGames(
-                username,
-                { max: maxGames, timeClasses: ANALYZED_TIME_CLASSES },
-                opts,
-              ),
-            ])
-          : await Promise.all([
-              fetchChesscomProfile(username, opts),
-              fetchChesscomGames(
-                username,
-                { max: maxGames, timeClasses: ANALYZED_TIME_CLASSES },
-                opts,
-              ),
-            ]);
+  const run = useCallback(
+    async (
+      platform: Platform,
+      username: string,
+      maxGames: number,
+      timeClasses: TimeClass[] = ANALYZED_TIME_CLASSES,
+    ) => {
+      if (running.current) return;
+      running.current = true;
+      setState({ phase: 'fetching', username });
+      try {
+        const opts = { cache: idbCache };
+        const [profile, games] =
+          platform === 'lichess'
+            ? await Promise.all([
+                fetchLichessProfile(username, opts),
+                fetchLichessGames(username, { max: maxGames, timeClasses }, opts),
+              ])
+            : await Promise.all([
+                fetchChesscomProfile(username, opts),
+                fetchChesscomGames(username, { max: maxGames, timeClasses }, opts),
+              ]);
 
-      if (games.length === 0) {
-        setState({ phase: 'no-games', profile });
-        return;
-      }
+        if (games.length === 0) {
+          setState({ phase: 'no-games', profile });
+          return;
+        }
 
-      const analyzed: AnalyzedGame[] = [];
-      const perPlayer: PlayerGameMetrics[] = [];
-      for (let i = 0; i < games.length; i++) {
-        const game = games[i]!;
-        const evals = await evaluateGamePositions(
-          game,
-          { local: getSharedPool(), cloud: cloudEval, cache: idbCache },
-          {
-            onProgress: (done, total) =>
-              setState({
-                phase: 'analyzing',
-                profile,
-                gameIndex: i,
-                gamesTotal: games.length,
-                positionsDone: done,
-                positionsTotal: total,
-                currentGame: game,
-              }),
+        const analyzed: AnalyzedGame[] = [];
+        const perPlayer: PlayerGameMetrics[] = [];
+        for (let i = 0; i < games.length; i++) {
+          const game = games[i]!;
+          const evals = await evaluateGamePositions(
+            game,
+            { local: getSharedPool(), cloud: cloudEval, cache: idbCache },
+            {
+              onProgress: (done, total) =>
+                setState({
+                  phase: 'analyzing',
+                  profile,
+                  gameIndex: i,
+                  gamesTotal: games.length,
+                  positionsDone: done,
+                  positionsTotal: total,
+                  currentGame: game,
+                }),
+            },
+          );
+          const assessments = assessPositions(game, evals);
+          const metrics = computePlayerGameMetrics(game, evals, assessments, profile.username);
+          if (metrics) perPlayer.push(metrics);
+          const depths = evals.flatMap((e) => (e ? [e.depth] : []));
+          analyzed.push({
+            game,
+            metrics,
+            avgDepth: depths.length ? depths.reduce((a, b) => a + b, 0) / depths.length : 0,
+            cloudShare: evals.length
+              ? evals.filter((e) => e?.source === 'cloud').length / evals.length
+              : 0,
+          });
+        }
+
+        const aggregate = aggregatePlayerMetrics(perPlayer);
+        const comparison = cohortComparisonFor(profile, perPlayer, aggregate);
+        setState({
+          phase: 'done',
+          data: {
+            platform,
+            profile,
+            tier: reportTier(profile, aggregate, comparison),
+            aggregate,
+            comparison,
+            games: analyzed,
+            finishedAt: Date.now(),
           },
-        );
-        const assessments = assessPositions(game, evals);
-        const metrics = computePlayerGameMetrics(game, evals, assessments, profile.username);
-        if (metrics) perPlayer.push(metrics);
-        const depths = evals.flatMap((e) => (e ? [e.depth] : []));
-        analyzed.push({
-          game,
-          metrics,
-          avgDepth: depths.length ? depths.reduce((a, b) => a + b, 0) / depths.length : 0,
-          cloudShare: evals.length
-            ? evals.filter((e) => e?.source === 'cloud').length / evals.length
-            : 0,
         });
+      } catch (err) {
+        setState({
+          phase: 'error',
+          message:
+            err instanceof UserNotFoundError
+              ? `No ${platform === 'lichess' ? 'lichess' : 'chess.com'} account named "${username}".`
+              : err instanceof Error
+                ? err.message
+                : String(err),
+        });
+      } finally {
+        running.current = false;
       }
-
-      const aggregate = aggregatePlayerMetrics(perPlayer);
-      const comparison = cohortComparisonFor(profile, perPlayer, aggregate);
-      setState({
-        phase: 'done',
-        data: {
-          platform,
-          profile,
-          tier: reportTier(profile, aggregate, comparison),
-          aggregate,
-          comparison,
-          games: analyzed,
-          finishedAt: Date.now(),
-        },
-      });
-    } catch (err) {
-      setState({
-        phase: 'error',
-        message:
-          err instanceof UserNotFoundError
-            ? `No ${platform === 'lichess' ? 'lichess' : 'chess.com'} account named "${username}".`
-            : err instanceof Error
-              ? err.message
-              : String(err),
-      });
-    } finally {
-      running.current = false;
-    }
-  }, []);
+    },
+    [],
+  );
 
   return { state, run };
 }
