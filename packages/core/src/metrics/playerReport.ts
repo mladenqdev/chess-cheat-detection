@@ -3,6 +3,7 @@ import { pvScoreCp, type Color, type PositionEval } from '../engine/types';
 import type { NormalizedGame, TimeClass } from '../types';
 import { gameAccuracy, type GameAccuracy } from './accuracy';
 import { moveCentipawnLoss } from './cpl';
+import { positionDifficulty } from './difficulty';
 import { engineMatchRank } from './engineMatch';
 import { clamp, mean, spearmanCorrelation, stddev, wilsonInterval } from './stats';
 import { thinkStats, thinkTimesMs, type ThinkStats } from './time';
@@ -27,6 +28,16 @@ export interface PlayerGameMetrics {
   t1: number;
   t2: number;
   t3: number;
+  /**
+   * Regan self-referential difficulty signal, over eligible moves that had a
+   * usable pre-move eval (matchScored of them). expectedT1 = Σ p0 (model-projected
+   * top-move matches for a cohort-typical player), expectedT1Var = Σ p0(1−p0),
+   * observedT1OnScored = how many of those the player actually top-matched.
+   */
+  matchScored: number;
+  observedT1OnScored: number;
+  expectedT1: number;
+  expectedT1Var: number;
   /** per-move centipawn losses on eligible moves (capped at CPL_CAP) */
   cpls: number[];
   /** our lichess-formula game accuracy over all moves */
@@ -82,6 +93,10 @@ export function computePlayerGameMetrics(
   let t1 = 0;
   let t2 = 0;
   let t3 = 0;
+  let matchScored = 0;
+  let observedT1OnScored = 0;
+  let expectedT1 = 0;
+  let expectedT1Var = 0;
   const cpls: number[] = [];
   const thinkMsEligible: number[] = [];
   const timeDifficulty: { thinkMs: number; gapCp: number }[] = [];
@@ -89,22 +104,32 @@ export function computePlayerGameMetrics(
   for (const assessment of assessments) {
     if (assessment.moverColor !== color || !assessment.eligible) continue;
     eligible++;
-    const rank = engineMatchRank(assessment.playedUci, evals[assessment.ply]);
+    const evalBefore = evals[assessment.ply];
+    const rank = engineMatchRank(assessment.playedUci, evalBefore);
     if (rank !== undefined) {
       if (rank <= 1) t1++;
       if (rank <= 2) t2++;
       if (rank <= 3) t3++;
     }
+    // Regan self-referential match test: project p0 (a cohort-typical player's
+    // chance of finding the top move) and tally observed vs expected on the
+    // same positions — a hard top-move find counts far above an obvious one.
+    const diff = positionDifficulty(evalBefore, color);
+    if (diff) {
+      matchScored++;
+      expectedT1 += diff.expectedTopMatch;
+      expectedT1Var += diff.expectedTopMatch * (1 - diff.expectedTopMatch);
+      if (rank === 1) observedT1OnScored++;
+    }
     const cpl = moveCentipawnLoss(
       assessment.playedUci,
       color,
-      evals[assessment.ply],
+      evalBefore,
       evals[assessment.ply + 1],
     );
     if (cpl !== undefined) cpls.push(cpl);
     const think = times[assessment.ply];
     if (think !== undefined) thinkMsEligible.push(think);
-    const evalBefore = evals[assessment.ply];
     if (think !== undefined && evalBefore && evalBefore.pvs.length >= 2) {
       timeDifficulty.push({
         thinkMs: think,
@@ -125,6 +150,10 @@ export function computePlayerGameMetrics(
     t1,
     t2,
     t3,
+    matchScored,
+    observedT1OnScored,
+    expectedT1,
+    expectedT1Var,
     cpls,
     accuracy: gameAccuracyFromPositionEvals(game, evals)[color],
     platformAccuracy: game[color].accuracy,
@@ -150,6 +179,12 @@ export interface PlayerAggregate {
   acpl?: { mean: number; std: number; n: number };
   accuracyMean?: { mean: number; n: number };
   timing?: ThinkStats;
+  /**
+   * Regan self-referential match test: observed top-move matches vs the model's
+   * projection Σ p0, as a z-score (positive = more engine-like than the move-choice
+   * model predicts a cohort-typical player would be). Needs no cohort baseline.
+   */
+  matchVsExpected?: { observed: number; expected: number; n: number; z: number };
   /** spread of per-game accuracy — assistance is steadier game-to-game than humans */
   accuracyStd?: { value: number; n: number };
   /** Spearman corr(think time, decision difficulty gap): humans negative, assistance ≈ 0 */
@@ -179,12 +214,26 @@ export function aggregatePlayerMetrics(perGame: PlayerGameMetrics[]): PlayerAggr
       : undefined;
   const sampleOk = eligible >= MIN_ELIGIBLE_MOVES;
 
+  const matchScored = perGame.reduce((n, g) => n + g.matchScored, 0);
+  const expectedT1 = perGame.reduce((s, g) => s + g.expectedT1, 0);
+  const expectedT1Var = perGame.reduce((s, g) => s + g.expectedT1Var, 0);
+  const observedT1 = perGame.reduce((n, g) => n + g.observedT1OnScored, 0);
+
   return {
     games: perGame.length,
     eligible,
     t1: rate(perGame.reduce((n, g) => n + g.t1, 0)),
     t2: rate(perGame.reduce((n, g) => n + g.t2, 0)),
     t3: rate(perGame.reduce((n, g) => n + g.t3, 0)),
+    matchVsExpected:
+      sampleOk && matchScored > 0 && expectedT1Var > 0
+        ? {
+            observed: observedT1,
+            expected: expectedT1,
+            n: matchScored,
+            z: (observedT1 - expectedT1) / Math.sqrt(expectedT1Var),
+          }
+        : undefined,
     // stat summaries are withheld under the sample gate — a tiny sample reads
     // as precision it doesn't have
     acpl:

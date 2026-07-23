@@ -1,33 +1,42 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerAggregate } from './playerReport';
 import {
+  cohortAt,
   compareToCohort,
-  findBand,
   MIN_BAND_PLAYERS,
-  type BandBaseline,
   type BaselineTable,
+  type RatingGridPoint,
 } from './baselines';
 
-const band: BandBaseline = {
-  timeClass: 'blitz',
-  minRating: 1600,
-  maxRating: 2000,
-  nPlayers: 30,
-  t1Rate: { mean: 0.33, std: 0.06 },
-  t2Rate: { mean: 0.5, std: 0.07 },
-  t3Rate: { mean: 0.6, std: 0.07 },
-  acpl: { mean: 45, std: 12 },
-  accuracy: { mean: 82, std: 6 },
-  instantRate: { mean: 0.1, std: 0.08 },
-  thinkCv: { mean: 0.8, std: 0.25 },
-  accuracyStd: { mean: 8, std: 3 },
-  timeComplexityCorr: { mean: -0.25, std: 0.12 },
+function mkPoint(over: Partial<RatingGridPoint> = {}): RatingGridPoint {
+  return {
+    rating: 1800,
+    nPlayers: 30,
+    t1Rate: { mean: 0.33, std: 0.06 },
+    t2Rate: { mean: 0.5, std: 0.07 },
+    t3Rate: { mean: 0.6, std: 0.07 },
+    acpl: { mean: 45, std: 12 },
+    accuracy: { mean: 82, std: 6 },
+    instantRate: { mean: 0.1, std: 0.08 },
+    thinkCv: { mean: 0.8, std: 0.25 },
+    accuracyStd: { mean: 8, std: 3 },
+    timeComplexityCorr: { mean: -0.25, std: 0.12 },
+    ...over,
+  };
+}
+
+const meta = {
+  engine: 'test',
+  depth: 12,
+  multiPv: 3,
+  generatedAt: '2026-07-12',
+  pilot: false,
+  window: 200,
+  step: 50,
 };
 
-const table: BaselineTable = {
-  meta: { engine: 'test', depth: 12, multiPv: 3, generatedAt: '2026-07-12', pilot: false },
-  bands: [band],
-};
+// single grid point → a constant baseline at any rating (keeps the scoring tests simple)
+const table: BaselineTable = { meta, grid: { blitz: [mkPoint()] } };
 
 function aggregate(over: Partial<PlayerAggregate>): PlayerAggregate {
   const rate = (r: number) => ({ successes: 0, n: 200, rate: r, ci: [r, r] as [number, number] });
@@ -52,12 +61,33 @@ function aggregate(over: Partial<PlayerAggregate>): PlayerAggregate {
   };
 }
 
-describe('findBand', () => {
-  it('matches time class and rating range (max exclusive)', () => {
-    expect(findBand(table, 'blitz', 1600)).toBe(band);
-    expect(findBand(table, 'blitz', 1999)).toBe(band);
-    expect(findBand(table, 'blitz', 2000)).toBeUndefined();
-    expect(findBand(table, 'rapid', 1700)).toBeUndefined();
+describe('cohortAt', () => {
+  const twoPoints: BaselineTable = {
+    meta,
+    grid: {
+      blitz: [
+        mkPoint({ rating: 1600, nPlayers: 40, t1Rate: { mean: 0.3, std: 0.06 } }),
+        mkPoint({ rating: 1800, nPlayers: 60, t1Rate: { mean: 0.36, std: 0.06 } }),
+      ],
+    },
+  };
+
+  it('interpolates metrics and count between grid points at the exact rating', () => {
+    const cohort = cohortAt(twoPoints, 'blitz', 1700)!; // midpoint
+    expect(cohort.t1Rate.mean).toBeCloseTo(0.33);
+    expect(cohort.nPlayers).toBe(50);
+    // the reported neighborhood is centered on the player, ±window
+    expect(cohort.minRating).toBe(1500);
+    expect(cohort.maxRating).toBe(1900);
+  });
+
+  it('clamps to the nearest endpoint outside the measured range', () => {
+    expect(cohortAt(twoPoints, 'blitz', 3000)!.t1Rate.mean).toBeCloseTo(0.36);
+    expect(cohortAt(twoPoints, 'blitz', 100)!.t1Rate.mean).toBeCloseTo(0.3);
+  });
+
+  it('returns undefined for a time class with no grid', () => {
+    expect(cohortAt(table, 'rapid', 1700)).toBeUndefined();
   });
 });
 
@@ -96,16 +126,16 @@ describe('compareToCohort', () => {
     expect(comparison!.tier).toBe('unusual');
   });
 
-  it('is undefined without a covering band', () => {
+  it('is undefined for a time class with no grid', () => {
     expect(
-      compareToCohort(aggregate({}), { timeClass: 'blitz', rating: 2500 }, table),
+      compareToCohort(aggregate({}), { timeClass: 'rapid', rating: 1700 }, table),
     ).toBeUndefined();
   });
 
-  it('flags thin bands as provisional', () => {
+  it('flags a thin local neighborhood as provisional', () => {
     const thinTable: BaselineTable = {
-      ...table,
-      bands: [{ ...band, nPlayers: MIN_BAND_PLAYERS - 1 }],
+      meta,
+      grid: { blitz: [mkPoint({ nPlayers: MIN_BAND_PLAYERS - 1 })] },
     };
     const comparison = compareToCohort(
       aggregate({}),
@@ -182,8 +212,8 @@ describe('compareToCohort', () => {
 
   it('skips metrics whose baseline spread is degenerate', () => {
     const degenerate: BaselineTable = {
-      ...table,
-      bands: [{ ...band, acpl: { mean: 45, std: 0 } }],
+      meta,
+      grid: { blitz: [mkPoint({ acpl: { mean: 45, std: 0 } })] },
     };
     const comparison = compareToCohort(
       aggregate({ acpl: { mean: 10, std: 5, n: 100 } }),

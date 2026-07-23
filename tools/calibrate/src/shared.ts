@@ -13,6 +13,8 @@ import {
   type PlayerAggregate,
   type PlayerGameMetrics,
 } from '@ccm/core';
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 export const USER_AGENT = 'chess-cheat-detection.com calibration (mladenqdev@gmail.com)';
 
@@ -26,6 +28,44 @@ export class MemCache implements KvCache {
   }
   async set<T>(key: string, value: T): Promise<void> {
     this.store.set(key, value);
+  }
+}
+
+/**
+ * Disk-backed eval cache: the raw Stockfish output is the expensive, formula-
+ * independent part, so we persist it once and recompute any metric from it in
+ * minutes instead of re-running the engine (hours). One {k,v} JSON per line,
+ * loaded into memory on start and appended on each new eval — crash-safe and
+ * resumable. A FEN is written once (evals are immutable at fixed depth/multiPv),
+ * so positions shared across games and players cache-hit for free.
+ */
+export class DiskCache implements KvCache {
+  private store = new Map<string, unknown>();
+  constructor(private readonly path: string) {
+    if (existsSync(path)) {
+      for (const line of readFileSync(path, 'utf8').split('\n')) {
+        if (!line.trim()) continue;
+        try {
+          const { k, v } = JSON.parse(line) as { k: string; v: unknown };
+          this.store.set(k, v);
+        } catch {
+          // tolerate a torn final line from an interrupted run
+        }
+      }
+    } else {
+      mkdirSync(dirname(path), { recursive: true });
+    }
+  }
+  async get<T>(key: string): Promise<T | undefined> {
+    return this.store.get(key) as T | undefined;
+  }
+  async set<T>(key: string, value: T): Promise<void> {
+    if (this.store.has(key)) return;
+    this.store.set(key, value);
+    appendFileSync(this.path, JSON.stringify({ k: key, v: value }) + '\n');
+  }
+  get size(): number {
+    return this.store.size;
   }
 }
 
@@ -51,6 +91,13 @@ export interface PlayerDatapoint {
   accuracyStdDev?: number | null;
   /** Spearman corr(think time, PV gap) pooled over eligible moves (v2 runs) */
   timeComplexityCorr?: number | null;
+  /** Regan self-referential match signal, pooled over this player's scored moves (v3 runs) */
+  matchScored?: number;
+  observedT1?: number;
+  expectedT1?: number;
+  expectedT1Var?: number;
+  /** per-player z = (observed − expected)/√var; positive = more top-matches than the model predicts */
+  matchZ?: number | null;
 }
 
 /**
@@ -67,6 +114,10 @@ export function rawDatapoint(
   const accuracies = perGame.flatMap((g) => (g.accuracy !== undefined ? [g.accuracy] : []));
   const times = perGame.flatMap((g) => g.thinkMsEligible);
   const timing = thinkStats(times);
+  const matchScored = perGame.reduce((n, g) => n + g.matchScored, 0);
+  const observedT1 = perGame.reduce((n, g) => n + g.observedT1OnScored, 0);
+  const expectedT1 = perGame.reduce((s, g) => s + g.expectedT1, 0);
+  const expectedT1Var = perGame.reduce((s, g) => s + g.expectedT1Var, 0);
   const pairs = perGame.flatMap((g) => g.timeDifficulty);
   const corr =
     pairs.length >= 30
@@ -89,6 +140,11 @@ export function rawDatapoint(
     thinkCv: timing?.coefficientOfVariation ?? null,
     accuracyStdDev: accuracies.length >= 5 ? stddev(accuracies) : null,
     timeComplexityCorr: corr ?? null,
+    matchScored,
+    observedT1,
+    expectedT1,
+    expectedT1Var,
+    matchZ: expectedT1Var > 0 ? (observedT1 - expectedT1) / Math.sqrt(expectedT1Var) : null,
   };
 }
 

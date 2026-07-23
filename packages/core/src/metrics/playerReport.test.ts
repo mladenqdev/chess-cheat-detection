@@ -59,6 +59,11 @@ describe('computePlayerGameMetrics', () => {
     const metrics = computePlayerGameMetrics(game, evals, assessments, 'spasski76');
     expect(metrics!.color).toBe('white');
     expect(metrics!.t1).toBe(metrics!.eligible); // white always played pv1
+    // every eligible white move had a usable eval and top-matched
+    expect(metrics!.matchScored).toBe(metrics!.eligible);
+    expect(metrics!.observedT1OnScored).toBe(metrics!.eligible);
+    // the model never fully expects the top move (pvs 20/10/0), so observed > expected
+    expect(metrics!.expectedT1).toBeLessThan(metrics!.eligible);
   });
 
   it('returns undefined for a user not in the game', () => {
@@ -77,6 +82,10 @@ describe('aggregatePlayerMetrics', () => {
     t1: 0,
     t2: 0,
     t3: 0,
+    matchScored: 0,
+    observedT1OnScored: 0,
+    expectedT1: 0,
+    expectedT1Var: 0,
     cpls: [],
     thinkMsEligible: [],
     timeDifficulty: [],
@@ -121,5 +130,38 @@ describe('aggregatePlayerMetrics', () => {
     const a = aggregatePlayerMetrics([gameMetrics({ eligible: MIN_ELIGIBLE_MOVES - 1 })]);
     expect(a.sampleOk).toBe(false);
     expect(a.acpl).toBeUndefined();
+  });
+
+  it('z-scores observed vs model-expected top matches (self-referential, no cohort)', () => {
+    // model expects half the top moves found: expected 65, variance 0.25·130 = 32.5
+    const asExpected = aggregatePlayerMetrics([
+      gameMetrics({
+        eligible: 130,
+        matchScored: 130,
+        observedT1OnScored: 65,
+        expectedT1: 65,
+        expectedT1Var: 32.5,
+      }),
+    ]);
+    expect(asExpected.matchVsExpected!.z).toBeCloseTo(0, 6);
+    expect(asExpected.matchVsExpected!.n).toBe(130);
+
+    // far more matches than the model predicts → strongly positive (engine-like)
+    const overMatch = aggregatePlayerMetrics([
+      gameMetrics({
+        eligible: 130,
+        matchScored: 130,
+        observedT1OnScored: 110,
+        expectedT1: 65,
+        expectedT1Var: 32.5,
+      }),
+    ]);
+    expect(overMatch.matchVsExpected!.z).toBeGreaterThan(5);
+
+    // withheld under the sample gate
+    const tiny = aggregatePlayerMetrics([
+      gameMetrics({ eligible: 10, matchScored: 10, observedT1OnScored: 9, expectedT1: 5, expectedT1Var: 2.5 }),
+    ]);
+    expect(tiny.matchVsExpected).toBeUndefined();
   });
 });

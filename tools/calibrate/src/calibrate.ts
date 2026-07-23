@@ -8,7 +8,7 @@ import { dirname } from 'node:path';
 import { createNodeEngine } from './nodeEngine';
 import {
   analyzePlayerGames,
-  MemCache,
+  DiskCache,
   rawDatapoint,
   USER_AGENT,
   type PlayerDatapoint,
@@ -22,6 +22,9 @@ function arg(name: string, fallback: string): string {
 const gamesPerPlayer = Number(arg('games', '6'));
 const inPath = arg('in', 'data/players.json');
 const outPath = arg('out', 'data/metrics.jsonl');
+// persisted raw engine evals — shared across runs/time-classes so the expensive
+// Stockfish pass happens once; later metric changes recompute from here in minutes
+const evalsPath = arg('evals', 'data/evals.jsonl');
 
 interface PlayersFile {
   timeClass: TimeClass;
@@ -51,11 +54,12 @@ console.log(
  * after ~700 players). Recycle it every N players; the outer full.sh retry
  * loop catches anything that still slips through.
  */
-const RECYCLE_ENGINE_EVERY = 25;
+const RECYCLE_ENGINE_EVERY = Number(process.env.RECYCLE_EVERY ?? '25');
 
 let engine = await createNodeEngine();
 let playersOnEngine = 0;
-const cache = new MemCache();
+const cache = new DiskCache(evalsPath);
+console.log(`eval cache: ${cache.size} positions loaded from ${evalsPath}`);
 const startedAt = Date.now();
 let processed = 0;
 
@@ -92,12 +96,17 @@ try {
           bandMax: band.max,
         });
         if (row.eligible === 0) {
-          // real games were analyzed yet nothing evaluated — the engine is dead;
-          // exit so full.sh restarts the process with a fresh engine and resumes
-          console.error(
-            `${label}: ${games.length} games, ${totalPlies} plies, 0 eligible — engine unhealthy, exiting for auto-restart`,
+          // 0 eligible means either a dead engine or a player with only ultra-short
+          // games (no analyzable decisions). Never exit here — that let one bad
+          // account stall the whole run in a restart loop. Skip the player, and
+          // recycle the engine as cheap insurance so a genuine death heals at once.
+          console.warn(
+            `${label}: ${games.length} games, ${totalPlies} plies, 0 eligible — skipping`,
           );
-          process.exit(1);
+          engine.terminate();
+          engine = await createNodeEngine();
+          playersOnEngine = 0;
+          continue;
         }
         appendFileSync(outPath, JSON.stringify(row) + '\n');
         processed++;

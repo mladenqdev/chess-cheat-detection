@@ -48,6 +48,10 @@ export async function createNodeEngine(): Promise<NodeEngine> {
   // the emscripten glue NULLS global fetch in Node (to force its fs loading
   // path), which would break every later lichess/chess.com API call — restore it
   const realFetch = globalThis.fetch;
+  // the glue is a one-shot singleton: a cached re-require returns a spent module
+  // whose init() is no longer a function, which crashed every in-process engine
+  // recycle. Drop it from the require cache so each recycle gets a fresh module.
+  delete requireModule.cache[requireModule.resolve(enginePath)];
   const init = requireModule(enginePath) as () => (cfg: unknown) => Promise<unknown>;
   const initialized = (await init()(config)) as EmscriptenEngine | undefined;
   globalThis.fetch = realFetch;

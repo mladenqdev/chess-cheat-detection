@@ -7,3 +7,4 @@ coverage/
 .claude/
 apps/web/public/engine/
 tools/calibrate/data/
+docs/
