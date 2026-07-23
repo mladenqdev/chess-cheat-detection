@@ -1,7 +1,6 @@
 import {
   aggregatePlayerMetrics,
   assessPositions,
-  CloudEvalClient,
   compareToCohort,
   computePlayerGameMetrics,
   defaultBaselines,
@@ -24,8 +23,6 @@ import {
 import { useCallback, useRef, useState } from 'react';
 import { getSharedPool } from '../engine/stockfishPool';
 import { idbCache } from '../lib/idbCache';
-
-const cloudEval = new CloudEvalClient();
 
 /** parses "/u/lichess/thibault" style report permalinks */
 export function parseReportPath(
@@ -57,7 +54,7 @@ export interface ReportData {
  * Picks the cohort to compare against: the time class carrying the most
  * eligible moves, with the player's current rating there (falling back to the
  * mean in-game rating). v1 compares the full aggregate against that band even
- * when time classes are mixed — noted as a refinement candidate.
+ * when time classes are mixed, noted as a refinement candidate.
  */
 function cohortComparisonFor(
   profile: NormalizedProfile,
@@ -147,7 +144,10 @@ export function useReport() {
           const game = games[i]!;
           const evals = await evaluateGamePositions(
             game,
-            { local: getSharedPool(), cloud: cloudEval, cache: idbCache },
+            // depth-12 local only: the baseline was measured at depth 12 without
+            // cloud-eval, so mixing in lichess's deeper evals made scores
+            // depth-inconsistent with it and non-deterministic between visitors
+            { local: getSharedPool(), cache: idbCache },
             {
               onProgress: (done, total) =>
                 setState({

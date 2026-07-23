@@ -11,7 +11,7 @@ export interface GameAnalysisDeps {
 export interface AnalyseOptions {
   depth?: number;
   multiPv?: number;
-  /** only ask cloud-eval below this ply — hit rate is ~0 outside the opening */
+  /** only ask cloud-eval below this ply, hit rate is ~0 outside the opening */
   cloudPlyLimit?: number;
   onProgress?: (done: number, total: number) => void;
 }
@@ -22,7 +22,9 @@ export const DEFAULT_ANALYSE: Required<Omit<AnalyseOptions, 'onProgress'>> = {
   cloudPlyLimit: 24,
 };
 
-const CACHE_PREFIX = 'eval:v1:';
+// v2: dropped lichess cloud-eval from the live pipeline; bump so previously
+// cached deeper cloud evals are re-computed at plain depth 12 for consistency
+const CACHE_PREFIX = 'eval:v2:';
 
 function isSufficient(evaluation: PositionEval, depth: number, multiPv: number): boolean {
   return (

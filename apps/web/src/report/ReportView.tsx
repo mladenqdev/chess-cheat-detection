@@ -28,6 +28,9 @@ function paceVerdict(playerCv: number, baseline: MetricBaseline | undefined): st
 function TierBanner({ data }: { data: ReportData }) {
   const { tier, profile, aggregate } = data;
   if (tier === 'flagged-by-platform') {
+    const c = data.comparison;
+    const where =
+      c?.tier === 'extreme' ? 'far outside' : c?.tier === 'unusual' ? 'above' : 'within';
     return (
       <section className="tier tier-flagged" role="status">
         <h2>Already banned by {profile.platform === 'chesscom' ? 'chess.com' : 'lichess'}</h2>
@@ -37,6 +40,15 @@ function TierBanner({ data }: { data: ReportData }) {
             : 'lichess marked this account for breaking its rules.'}{' '}
           That is the platform's own public flag. Everything below is our independent measurement.
         </p>
+        {aggregate.sampleOk && c && (
+          <p className="small">
+            Our own read: unusualness score {c.composite.toFixed(1)}, {where} the normal range for{' '}
+            {c.band.timeClass} players rated {c.band.minRating}-{c.band.maxRating}.{' '}
+            {c.composite >= 2
+              ? 'Our numbers independently line up with the ban.'
+              : "The analyzed games actually look ordinary, a reminder that statistics don't catch every subtle case."}
+          </p>
+        )}
       </section>
     );
   }
@@ -78,8 +90,11 @@ function TierBanner({ data }: { data: ReportData }) {
       },
       unusual: {
         className: 'tier-insufficient',
-        title: `Plays better than most ${range} ${band.timeClass} players`,
-        body: `Compared to ${group}, some of this account's numbers sit above the ordinary range. The unusualness score is ${score}: under 2 is normal, above 2 is uncommon, and above 3.5 almost never happens naturally. Treat it as worth attention, not as an accusation. Good form, opening prep, or a strong player on a new account can look like this. More games sharpen the picture.`,
+        title:
+          composite >= 3
+            ? `Well above the normal range for ${range} ${band.timeClass} play`
+            : `Above the normal range for ${range} ${band.timeClass} players`,
+        body: `Compared to ${group}, several of this account's numbers sit above the ordinary range for its rating. The unusualness score is ${score}: under 2 is normal, above 2 is uncommon, and above 3.5 almost never happens naturally. This is a statistical signal worth attention, not proof, but the closer to 3.5, the harder it is to explain by honest play. Good form, opening prep, or a strong player on a new account can also look like this. More games sharpen the picture.`,
       },
       extreme: {
         className: 'tier-flagged',
