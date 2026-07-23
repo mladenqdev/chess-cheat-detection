@@ -5,7 +5,7 @@ import baselinesJson from './baselines.generated.json';
 /**
  * Rating-conditioned baselines: a per-(time class) GRID of rating points, each
  * holding the distribution of a metric over real players within ±window of that
- * rating (measured with OUR engine at OUR depth — match rates are engine- and
+ * rating (measured with OUR engine at OUR depth, match rates are engine- and
  * depth-relative, so published numbers don't transfer). compareToCohort()
  * interpolates the grid to a player's EXACT rating, so a strong-for-their-band
  * player is judged against their real neighborhood, not a wide fixed band.
@@ -51,7 +51,7 @@ export interface BaselineTable {
 /**
  * The cohort a single player is judged against: same shape the report renders,
  * but interpolated to the player's exact rating. minRating/maxRating describe
- * the ±window neighborhood it summarizes (for the "players rated X–Y" copy).
+ * the ±window neighborhood it summarizes (for the "players rated X-Y" copy).
  */
 export interface BandBaseline {
   timeClass: TimeClass;
@@ -164,8 +164,7 @@ function z(
 
 /**
  * Compares a player's aggregate to the cohort at their exact rating. The
- * composite combines the available z-scores with Stouffer's weighted method —
- * Σ(w·z)/√Σw² — so independent anomalies accumulate instead of averaging out.
+ * composite combines the available z-scores with Stouffer's weighted method,  * Σ(w·z)/√Σw², so independent anomalies accumulate instead of averaging out.
  * Engine-agreement and mistake profile carry most of the weight; timing signals
  * stay secondary (they are noisier and honest fast players exist).
  */
@@ -181,7 +180,7 @@ export function compareToCohort(
   const zAcpl = z(aggregate.acpl?.mean, band.acpl, true); // lower acpl = more suspicious
   const zAccuracy = z(aggregate.accuracyMean?.mean, band.accuracy);
   // timing signals are ONE-SIDED: flat timing / instant replies add suspicion,
-  // but varied timing must not subtract it — assistance can fake thinking time
+  // but varied timing must not subtract it, assistance can fake thinking time
   const clampSuspicion = (score: number | undefined) =>
     score === undefined ? undefined : Math.max(0, score);
   const zInstant = clampSuspicion(z(aggregate.timing?.instantRate, band.instantRate));

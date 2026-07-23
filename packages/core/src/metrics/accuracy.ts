@@ -27,7 +27,7 @@ export interface GameAccuracy {
  * Game accuracy for both players from the per-move evals (white POV cp after
  * each move, starting with white's first move; undefined = no eval, e.g. mate
  * scores lichess drops). Mean of the volatility-weighted mean and the harmonic
- * mean of per-move accuracies, with window-stddev weights — faithful to lila.
+ * mean of per-move accuracies, with window-stddev weights, faithful to lila.
  */
 export function gameAccuracy(cpsAfterEachMove: (number | undefined)[]): GameAccuracy {
   const allWin: (number | undefined)[] = [INITIAL_CP, ...cpsAfterEachMove].map((cp) =>
@@ -35,8 +35,7 @@ export function gameAccuracy(cpsAfterEachMove: (number | undefined)[]): GameAccu
   );
   const windowSize = clamp(Math.floor(cpsAfterEachMove.length / 10), 2, 8);
 
-  // (windowSize - 2) copies of the head window, then all sliding windows —
-  // this lines the weight list up 1:1 with the move pairs below
+  // (windowSize - 2) copies of the head window, then all sliding windows,   // this lines the weight list up 1:1 with the move pairs below
   const windows: (number | undefined)[][] = [];
   for (let i = 0; i < Math.min(windowSize, allWin.length) - 2; i++) {
     windows.push(allWin.slice(0, windowSize));

@@ -2,7 +2,7 @@ import type { NormalizedGame } from '../types';
 import { pvScoreCp, type Color, type PositionEval } from './types';
 
 /**
- * The eligible-position filter — the methodological core shared by PGN-Spy and
+ * The eligible-position filter, the methodological core shared by PGN-Spy and
  * Ken Regan's work. Engine-correlation and centipawn-loss metrics are only
  * meaningful over positions where the player had a real, undecided choice:
  *

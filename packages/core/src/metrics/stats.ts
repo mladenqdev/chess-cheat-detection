@@ -51,7 +51,7 @@ function averageRanks(xs: number[]): number[] {
 
 /**
  * Spearman rank correlation: Pearson correlation of the rank vectors.
- * Robust to outliers and non-linear (but monotonic) relationships — the right
+ * Robust to outliers and non-linear (but monotonic) relationships, the right
  * tool for "does thinking time track position difficulty". undefined when
  * either variable is degenerate or inputs are unusable.
  */

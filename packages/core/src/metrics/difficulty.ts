@@ -2,21 +2,19 @@ import { pvScoreCp, type Color, type PositionEval } from '../engine/types';
 import { clamp } from './stats';
 
 /**
- * Position difficulty à la Regan — the missing "how hard was this choice"
+ * Position difficulty à la Regan, the missing "how hard was this choice"
  * weight that lets a match in a sharp position count for more than a match on
  * an obvious recapture. Built from the MultiPV lines we already compute.
  *
  * Two ideas from Regan & Haworth (2011) / Regan (2012):
- *  1. Value differences are perceived LOGARITHMICALLY, not in raw centipawns —
- *     a marginal centipawn matters far more near equality than when already
+ *  1. Value differences are perceived LOGARITHMICALLY, not in raw centipawns,  *     a marginal centipawn matters far more near equality than when already
  *     winning. So drops are measured with G(x) = sign(x)·ln(1+|x|) (pawns).
  *  2. A simplified move-choice model turns those drops into a probability that
  *     a cohort-typical player picks each move. This yields two distinct facets:
- *       - hazard = Σ p_i·δ_i, the expected points a typical player loses here —
- *         the natural yardstick for the ERROR side (ACPL): losing points where
+ *       - hazard = Σ p_i·δ_i, the expected points a typical player loses here,  *         the natural yardstick for the ERROR side (ACPL): losing points where
  *         hazard is high is normal, losing none is impressive.
  *       - expectedTopMatch = p_0, the probability that player even finds the top
- *         move — the weight for the MATCH side. Comparing observed matches to
+ *         move, the weight for the MATCH side. Comparing observed matches to
  *         Σ p_0 (Regan's MM_e) credits a hard top-move find far above an obvious
  *         one, without over-crediting positions with many equally-good moves.
  *
@@ -27,9 +25,9 @@ import { clamp } from './stats';
  */
 
 export interface DifficultyParams {
-  /** sensitivity — smaller magnifies small value differences (stronger discrimination) */
+  /** sensitivity, smaller magnifies small value differences (stronger discrimination) */
   s: number;
-  /** consistency — larger sharply suppresses clearly-worse moves */
+  /** consistency, larger sharply suppresses clearly-worse moves */
   c: number;
 }
 
@@ -67,7 +65,7 @@ function solveTopProb(invY: number[]): number {
 export interface PositionDifficulty {
   /** expected points loss over the move distribution (log-scaled pawns); 0 = trivial */
   hazard: number;
-  /** p0 — model probability a cohort-typical player finds the engine's top move */
+  /** p0, model probability a cohort-typical player finds the engine's top move */
   expectedTopMatch: number;
   /** how many candidate moves (PVs) were available to weigh */
   moveCount: number;

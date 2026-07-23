@@ -19,7 +19,7 @@ describe('normalizeLichessGame', () => {
 
   it('maps centisecond clocks to ms, zipping defensively', () => {
     const game = normalizeLichessGame(plainGame!);
-    // fixture has 43 clock entries for 42 moves — extra entry must be ignored
+    // fixture has 43 clock entries for 42 moves, extra entry must be ignored
     expect(game.moves[0]!.clockAfterMs).toBe(300_030);
     expect(game.moves.every((m) => m.clockAfterMs !== undefined)).toBe(true);
   });

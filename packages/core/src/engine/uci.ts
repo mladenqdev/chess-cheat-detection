@@ -9,7 +9,7 @@ import {
 
 /**
  * Transport to a UCI engine process/worker. The web app wraps a Web Worker,
- * Node tools can wrap the stockfish npm package — the session logic is shared.
+ * Node tools can wrap the stockfish npm package, the session logic is shared.
  */
 export interface UciTransport {
   post(command: string): void;
@@ -47,8 +47,7 @@ export function parseInfoLine(line: string): ParsedInfo | undefined {
 const EVAL_TIMEOUT_MS = 60_000;
 
 /**
- * Drives one UCI engine over a transport. Evaluations are serialized —
- * a UCI engine runs one search at a time; use several sessions for parallelism.
+ * Drives one UCI engine over a transport. Evaluations are serialized,  * a UCI engine runs one search at a time; use several sessions for parallelism.
  * Scores are converted from the engine's side-to-move POV to white POV.
  */
 export class UciEngineSession implements LocalEngine {

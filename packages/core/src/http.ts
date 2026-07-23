@@ -55,7 +55,7 @@ export async function getText(url: string, opts: HttpOpts = {}, accept?: string)
   const headers: Record<string, string> = {};
   // only send a custom User-Agent from Node (tools/calibrate). In the browser,
   // setting it turns the request non-simple and triggers a CORS preflight that
-  // chess.com's API rejects — which breaks Firefox/Safari. Browsers send their
+  // chess.com's API rejects, which breaks Firefox/Safari. Browsers send their
   // own User-Agent automatically.
   if (opts.userAgent) headers['User-Agent'] = opts.userAgent;
   if (accept) headers['Accept'] = accept;

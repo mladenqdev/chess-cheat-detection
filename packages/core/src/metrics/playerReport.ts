@@ -48,7 +48,7 @@ export interface PlayerGameMetrics {
   thinkMsEligible: number[];
   /**
    * (think time, decision difficulty) pairs on eligible moves; difficulty is
-   * the PV1−PV2 gap in cp from the mover's POV — small gap = genuinely hard
+   * the PV1−PV2 gap in cp from the mover's POV, small gap = genuinely hard
    * choice. Humans think longer on hard choices; assistance doesn't.
    */
   timeDifficulty: { thinkMs: number; gapCp: number }[];
@@ -57,7 +57,7 @@ export interface PlayerGameMetrics {
 /**
  * Game accuracy for both players from our position evals.
  * cps[i] (eval after move i) = best line of the position before move i+1;
- * the final move has no successor eval and is skipped — same hole semantics
+ * the final move has no successor eval and is skipped, same hole semantics
  * as lichess uses for mate scores.
  */
 export function gameAccuracyFromPositionEvals(
@@ -113,7 +113,7 @@ export function computePlayerGameMetrics(
     }
     // Regan self-referential match test: project p0 (a cohort-typical player's
     // chance of finding the top move) and tally observed vs expected on the
-    // same positions — a hard top-move find counts far above an obvious one.
+    // same positions, a hard top-move find counts far above an obvious one.
     const diff = positionDifficulty(evalBefore, color);
     if (diff) {
       matchScored++;
@@ -185,11 +185,11 @@ export interface PlayerAggregate {
    * model predicts a cohort-typical player would be). Needs no cohort baseline.
    */
   matchVsExpected?: { observed: number; expected: number; n: number; z: number };
-  /** spread of per-game accuracy — assistance is steadier game-to-game than humans */
+  /** spread of per-game accuracy, assistance is steadier game-to-game than humans */
   accuracyStd?: { value: number; n: number };
   /** Spearman corr(think time, decision difficulty gap): humans negative, assistance ≈ 0 */
   timeComplexityCorr?: { value: number; n: number };
-  /** eligible >= MIN_ELIGIBLE_MOVES — below it, show no conclusions */
+  /** eligible >= MIN_ELIGIBLE_MOVES, below it, show no conclusions */
   sampleOk: boolean;
 }
 
@@ -234,7 +234,7 @@ export function aggregatePlayerMetrics(perGame: PlayerGameMetrics[]): PlayerAggr
             z: (observedT1 - expectedT1) / Math.sqrt(expectedT1Var),
           }
         : undefined,
-    // stat summaries are withheld under the sample gate — a tiny sample reads
+    // stat summaries are withheld under the sample gate, a tiny sample reads
     // as precision it doesn't have
     acpl:
       sampleOk && cpls.length > 0

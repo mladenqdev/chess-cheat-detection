@@ -1,7 +1,7 @@
 // Builds a rating-conditioned baseline GRID from calibration datapoints and
 // writes it into core. For each time class and each rating grid point (every
 // STEP), we compute the mean/std of each metric over players within ±WINDOW of
-// that rating — so a player is compared to their actual neighborhood, not a wide
+// that rating, so a player is compared to their actual neighborhood, not a wide
 // fixed band. compareToCohort() interpolates this grid at the player's exact
 // rating, which removes the "top of a 400-band looks suspicious" edge effect.
 //   pnpm --filter @ccm/calibrate exec tsx src/build-baselines.ts \
@@ -36,7 +36,7 @@ const metric = (values: (number | null | undefined)[]) => {
   const present = values.filter((v): v is number => typeof v === 'number');
   return { mean: mean(present), std: stddev(present) };
 };
-/** for metrics some datapoints lack — omit rather than emit a fake zero-std */
+/** for metrics some datapoints lack, omit rather than emit a fake zero-std */
 const maybeMetric = (values: (number | null | undefined)[]) => {
   const present = values.filter((v): v is number => typeof v === 'number');
   return present.length >= 2 ? { mean: mean(present), std: stddev(present) } : undefined;
@@ -92,10 +92,12 @@ writeFileSync(outPath, JSON.stringify(table, null, 2) + '\n');
 for (const [timeClass, points] of Object.entries(grid)) {
   const mid = points[Math.floor(points.length / 2)];
   console.log(
-    `${timeClass}: ${points.length} grid points ${points[0]?.rating}–${points[points.length - 1]?.rating}` +
+    `${timeClass}: ${points.length} grid points ${points[0]?.rating}-${points[points.length - 1]?.rating}` +
       (mid
         ? ` | @${mid.rating} (n=${mid.nPlayers}): t1 ${(mid.t1Rate.mean * 100).toFixed(1)}±${(mid.t1Rate.std * 100).toFixed(1)}% acpl ${mid.acpl.mean.toFixed(0)}`
         : ''),
   );
 }
-console.log(`wrote ${outPath} (pilot=${pilot}, window ±${window}, step ${step}, players ${rows.length})`);
+console.log(
+  `wrote ${outPath} (pilot=${pilot}, window ±${window}, step ${step}, players ${rows.length})`,
+);

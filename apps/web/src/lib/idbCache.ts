@@ -27,7 +27,7 @@ export const idbCache: KvCache = {
       const entry: Entry<T> = { v: value, exp: ttlMs !== undefined ? Date.now() + ttlMs : null };
       await set(`ccm:${key}`, entry);
     } catch {
-      // ignore — cache is best-effort
+      // ignore, cache is best-effort
     }
   },
 };

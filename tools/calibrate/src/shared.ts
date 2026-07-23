@@ -18,7 +18,7 @@ import { dirname } from 'node:path';
 
 export const USER_AGENT = 'chess-cheat-detection.com calibration (mladenqdev@gmail.com)';
 
-/** identical to what the website runs — calibration must match production */
+/** identical to what the website runs, calibration must match production */
 export const ANALYSIS = { depth: 12, multiPv: 3 } as const;
 
 export class MemCache implements KvCache {
@@ -35,7 +35,7 @@ export class MemCache implements KvCache {
  * Disk-backed eval cache: the raw Stockfish output is the expensive, formula-
  * independent part, so we persist it once and recompute any metric from it in
  * minutes instead of re-running the engine (hours). One {k,v} JSON per line,
- * loaded into memory on start and appended on each new eval — crash-safe and
+ * loaded into memory on start and appended on each new eval, crash-safe and
  * resumable. A FEN is written once (evals are immutable at fixed depth/multiPv),
  * so positions shared across games and players cache-hit for free.
  */
@@ -102,7 +102,7 @@ export interface PlayerDatapoint {
 
 /**
  * Raw (ungated) player metrics for calibration: unlike the product aggregate,
- * the sample gate must NOT withhold values here — small per-player samples are
+ * the sample gate must NOT withhold values here, small per-player samples are
  * fine because the population statistics live at the band level.
  */
 export function rawDatapoint(

@@ -12,6 +12,7 @@ export * from './engine/analyser';
 export * from './metrics/stats';
 export * from './metrics/accuracy';
 export * from './metrics/cpl';
+export * from './metrics/difficulty';
 export * from './metrics/engineMatch';
 export * from './metrics/time';
 export * from './metrics/playerReport';

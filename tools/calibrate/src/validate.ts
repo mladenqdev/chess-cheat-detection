@@ -80,7 +80,7 @@ try {
           `tier=${comparison.tier} eligible=${eligible}`,
       );
     } catch (err) {
-      console.error(`${account.username}: FAILED — ${err instanceof Error ? err.message : err}`);
+      console.error(`${account.username}: FAILED, ${err instanceof Error ? err.message : err}`);
     }
   }
 } finally {

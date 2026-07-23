@@ -20,7 +20,7 @@ export interface CloudEvalSource {
  *
  * Design: never throws, never sleeps. A miss (404), rate limit (429) or network
  * error returns undefined and the caller falls back to the local engine. On 429
- * the client disables itself for a while — analysis must not hammer lichess.
+ * the client disables itself for a while, analysis must not hammer lichess.
  * Requests are serialized to stay polite.
  */
 export class CloudEvalClient implements CloudEvalSource {

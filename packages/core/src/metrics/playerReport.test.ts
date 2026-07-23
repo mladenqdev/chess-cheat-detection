@@ -160,7 +160,13 @@ describe('aggregatePlayerMetrics', () => {
 
     // withheld under the sample gate
     const tiny = aggregatePlayerMetrics([
-      gameMetrics({ eligible: 10, matchScored: 10, observedT1OnScored: 9, expectedT1: 5, expectedT1Var: 2.5 }),
+      gameMetrics({
+        eligible: 10,
+        matchScored: 10,
+        observedT1OnScored: 9,
+        expectedT1: 5,
+        expectedT1Var: 2.5,
+      }),
     ]);
     expect(tiny.matchVsExpected).toBeUndefined();
   });

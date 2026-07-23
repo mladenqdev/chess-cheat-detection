@@ -64,7 +64,7 @@ export class StockfishPool implements LocalEngine {
 
 let shared: StockfishPool | undefined;
 
-/** Lazy shared pool — workers load ~7MB of WASM, so create them only on first use. */
+/** Lazy shared pool, workers load ~7MB of WASM, so create them only on first use. */
 export function getSharedPool(): StockfishPool {
   shared ??= new StockfishPool();
   return shared;

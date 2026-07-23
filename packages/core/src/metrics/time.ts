@@ -3,8 +3,7 @@ import { mean, median, stddev } from './stats';
 
 /**
  * Think time per move in ms: own remaining clock before the move, minus after,
- * plus the increment (which was added on completing the move). Clamped at 0 —
- * lag compensation can make the raw delta slightly negative.
+ * plus the increment (which was added on completing the move). Clamped at 0,  * lag compensation can make the raw delta slightly negative.
  * undefined where clocks or the time control are missing (e.g. correspondence).
  */
 export function thinkTimesMs(game: NormalizedGame): (number | undefined)[] {
@@ -25,7 +24,7 @@ export interface ThinkStats {
   meanMs: number;
   medianMs: number;
   stdMs: number;
-  /** std/mean — low values mean suspiciously flat timing */
+  /** std/mean, low values mean suspiciously flat timing */
   coefficientOfVariation: number;
   /** share of moves under INSTANT_MOVE_MS */
   instantRate: number;

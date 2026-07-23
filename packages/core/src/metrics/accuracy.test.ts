@@ -25,7 +25,7 @@ describe('moveAccuracyFromWinPercents (mover POV)', () => {
 describe('gameAccuracy', () => {
   it('reproduces the platform-reported accuracies from the platform evals (golden test)', () => {
     // the fixture game has lichess server analysis: white accuracy 75, black 81.
-    // feed lichess's own per-move evals through our port — the numbers must agree.
+    // feed lichess's own per-move evals through our port, the numbers must agree.
     const cps = analysedRaw.analysis!.map((entry) =>
       entry.eval !== undefined ? entry.eval : undefined,
     );

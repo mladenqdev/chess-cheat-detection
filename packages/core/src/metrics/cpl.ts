@@ -11,7 +11,7 @@ export const CPL_CAP = 1000;
  * 1. the played move IS the engine's top move → 0 by definition
  * 2. the eval of the resulting position (deeper search of the actual continuation)
  * 3. the matched multiPV line's score, when the next position was never evaluated
- * Otherwise undefined — the move can't be scored honestly.
+ * Otherwise undefined, the move can't be scored honestly.
  */
 export function moveCentipawnLoss(
   playedUci: string,

@@ -23,14 +23,14 @@ export interface NodeEngine {
 
 /**
  * Runs the same lite single-threaded Stockfish WASM the website ships, in-process.
- * Calibration MUST use the identical engine/depth as the site — match rates are
+ * Calibration MUST use the identical engine/depth as the site, match rates are
  * engine-relative. Note: `print` must be injected before init; assigning it after
  * startup does nothing (emscripten captures stdout at initialization).
  */
 export async function createNodeEngine(): Promise<NodeEngine> {
   const pkgDir = dirname(requireModule.resolve('stockfish/package.json'));
   const enginePath = join(pkgDir, 'bin', 'stockfish-18-lite-single.js');
-  // emscripten asks for a GENERIC name ("stockfish.wasm") — always hand it the
+  // emscripten asks for a GENERIC name ("stockfish.wasm"), always hand it the
   // lite-single binary, or it silently loads the multithreaded 107MB wasm and
   // dies on a memory-import LinkError
   const wasmPath = join(pkgDir, 'bin', 'stockfish-18-lite-single.wasm');
@@ -38,7 +38,7 @@ export async function createNodeEngine(): Promise<NodeEngine> {
   let deliver: (line: string) => void = () => {};
   const config = {
     // this build's glue overrides `print` with one that prefers `listener`
-    // and falls back to console.log — listener is the real output hook
+    // and falls back to console.log, listener is the real output hook
     listener: (line: string) => deliver(String(line)),
     print: (line: string) => deliver(String(line)),
     printErr: (line: string) => deliver(String(line)),
@@ -46,7 +46,7 @@ export async function createNodeEngine(): Promise<NodeEngine> {
   };
 
   // the emscripten glue NULLS global fetch in Node (to force its fs loading
-  // path), which would break every later lichess/chess.com API call — restore it
+  // path), which would break every later lichess/chess.com API call, restore it
   const realFetch = globalThis.fetch;
   // the glue is a one-shot singleton: a cached re-require returns a spent module
   // whose init() is no longer a function, which crashed every in-process engine

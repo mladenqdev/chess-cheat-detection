@@ -175,8 +175,7 @@ export function normalizeChesscomProfile(
   }
 
   // only the explicit fair-play status is a platform ban; plain "closed" means
-  // the account was closed (usually by its owner) WITHOUT a cheating flag —
-  // calling that "banned" would defame self-closed accounts
+  // the account was closed (usually by its owner) WITHOUT a cheating flag,   // calling that "banned" would defame self-closed accounts
   const flagged = profile.status === 'closed:fair_play_violations';
   return {
     platform: 'chesscom',

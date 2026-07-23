@@ -1,5 +1,5 @@
 // Analyzes sampled players with the production engine settings and appends
-// one player-level datapoint per line (resumable — already-done players skip).
+// one player-level datapoint per line (resumable, already-done players skip).
 //   pnpm --filter @ccm/calibrate exec tsx src/calibrate.ts [--games 6] \
 //     [--in data/players.json] [--out data/metrics.jsonl]
 import { fetchLichessGames, type TimeClass } from '@ccm/core';
@@ -22,7 +22,7 @@ function arg(name: string, fallback: string): string {
 const gamesPerPlayer = Number(arg('games', '6'));
 const inPath = arg('in', 'data/players.json');
 const outPath = arg('out', 'data/metrics.jsonl');
-// persisted raw engine evals — shared across runs/time-classes so the expensive
+// persisted raw engine evals, shared across runs/time-classes so the expensive
 // Stockfish pass happens once; later metric changes recompute from here in minutes
 const evalsPath = arg('evals', 'data/evals.jsonl');
 
@@ -45,7 +45,7 @@ if (existsSync(outPath)) {
 
 const totalPlayers = plan.bands.reduce((n, b) => n + b.players.length, 0);
 console.log(
-  `calibrating ${totalPlayers} players (${done.size} already done) — ` +
+  `calibrating ${totalPlayers} players (${done.size} already done), ` +
     `${gamesPerPlayer} games each, depth 12 multipv 3`,
 );
 
@@ -81,8 +81,8 @@ try {
         );
         const totalPlies = games.reduce((n, g) => n + g.moves.length, 0);
         if (games.length === 0 || totalPlies < 50) {
-          // closed account, or no rated games of this time class — nothing to measure
-          console.log(`${label}: no analyzable ${plan.timeClass} games — skipped`);
+          // closed account, or no rated games of this time class, nothing to measure
+          console.log(`${label}: no analyzable ${plan.timeClass} games, skipped`);
           continue;
         }
         const t0 = Date.now();
@@ -97,11 +97,11 @@ try {
         });
         if (row.eligible === 0) {
           // 0 eligible means either a dead engine or a player with only ultra-short
-          // games (no analyzable decisions). Never exit here — that let one bad
+          // games (no analyzable decisions). Never exit here, that let one bad
           // account stall the whole run in a restart loop. Skip the player, and
           // recycle the engine as cheap insurance so a genuine death heals at once.
           console.warn(
-            `${label}: ${games.length} games, ${totalPlies} plies, 0 eligible — skipping`,
+            `${label}: ${games.length} games, ${totalPlies} plies, 0 eligible, skipping`,
           );
           engine.terminate();
           engine = await createNodeEngine();
@@ -112,11 +112,11 @@ try {
         processed++;
         console.log(
           `${label}: games=${row.games} eligible=${row.eligible} ` +
-            `t1=${(row.t1Rate * 100).toFixed(1)}% acpl=${row.acplMean?.toFixed(0) ?? '—'} ` +
-            `acc=${row.accuracyMean?.toFixed(1) ?? '—'} in ${Math.round((Date.now() - t0) / 1000)}s`,
+            `t1=${(row.t1Rate * 100).toFixed(1)}% acpl=${row.acplMean?.toFixed(0) ?? ', '} ` +
+            `acc=${row.accuracyMean?.toFixed(1) ?? ', '} in ${Math.round((Date.now() - t0) / 1000)}s`,
         );
       } catch (err) {
-        console.error(`${label}: FAILED — ${err instanceof Error ? err.message : String(err)}`);
+        console.error(`${label}: FAILED, ${err instanceof Error ? err.message : String(err)}`);
       }
     }
   }
