@@ -91,13 +91,6 @@ export interface PlayerDatapoint {
   accuracyStdDev?: number | null;
   /** Spearman corr(think time, PV gap) pooled over eligible moves (v2 runs) */
   timeComplexityCorr?: number | null;
-  /** Regan self-referential match signal, pooled over this player's scored moves (v3 runs) */
-  matchScored?: number;
-  observedT1?: number;
-  expectedT1?: number;
-  expectedT1Var?: number;
-  /** per-player z = (observed − expected)/√var; positive = more top-matches than the model predicts */
-  matchZ?: number | null;
 }
 
 /**
@@ -114,10 +107,6 @@ export function rawDatapoint(
   const accuracies = perGame.flatMap((g) => (g.accuracy !== undefined ? [g.accuracy] : []));
   const times = perGame.flatMap((g) => g.thinkMsEligible);
   const timing = thinkStats(times);
-  const matchScored = perGame.reduce((n, g) => n + g.matchScored, 0);
-  const observedT1 = perGame.reduce((n, g) => n + g.observedT1OnScored, 0);
-  const expectedT1 = perGame.reduce((s, g) => s + g.expectedT1, 0);
-  const expectedT1Var = perGame.reduce((s, g) => s + g.expectedT1Var, 0);
   const pairs = perGame.flatMap((g) => g.timeDifficulty);
   const corr =
     pairs.length >= 30
@@ -140,11 +129,6 @@ export function rawDatapoint(
     thinkCv: timing?.coefficientOfVariation ?? null,
     accuracyStdDev: accuracies.length >= 5 ? stddev(accuracies) : null,
     timeComplexityCorr: corr ?? null,
-    matchScored,
-    observedT1,
-    expectedT1,
-    expectedT1Var,
-    matchZ: expectedT1Var > 0 ? (observedT1 - expectedT1) / Math.sqrt(expectedT1Var) : null,
   };
 }
 
